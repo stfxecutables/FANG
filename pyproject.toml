@@ -1,0 +1,17 @@
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = 'black'
+src_paths = ['./', 'src', 'test']
+skip_gitignore = false
+line_length = 100
+atomic = true
+sections = ['FUTURE', 'STDLIB', 'THIRDPARTY', 'LOCALFOLDER', 'FIRSTPARTY']
+known_local_folder = ['./', 'src', 'test']
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # note the use of single quote below to denote "raw" strings in TOML
+    'ignore:the imp module is deprecated:DeprecationWarning',
+]
