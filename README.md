@@ -1,6 +1,14 @@
-# FANG
-
 Automatically generate, select, and evolve deep learning architectures.
+
+- [Code Design and Design Philosophy (For Students new to Python)](#code-design-and-design-philosophy-for-students-new-to-python)
+  - [The Evolutionary Algorithm](#the-evolutionary-algorithm)
+    - [Common Evolutionary Functions](#common-evolutionary-functions)
+  - [Interfacing with Deep Learning Libraries](#interfacing-with-deep-learning-libraries)
+    - [Interfacing with Layers](#interfacing-with-layers)
+      - [The `Arguments` and `ArgDef` Class](#the-arguments-and-argdef-class)
+    - [Interfacing with `Module`s and `initializer.py`](#interfacing-with-modules-and-initializerpy)
+- [Current Implementation](#current-implementation)
+  - [TODO](#todo)
 
 # Code Design and Design Philosophy (For Students new to Python)
 
