@@ -3,7 +3,7 @@ from src.interface.pytorch.nodes.activations import ELU, Hardswish, LeakyReLU, P
 from src.interface.pytorch.nodes.conv import Conv2d, UpConv2d
 from src.interface.pytorch.nodes.drop import Dropout, Dropout2d
 from src.interface.pytorch.nodes.linear import Linear
-from src.interface.pytorch.nodes.norm import BatchNorm2d, InstanceNorm2d
+from src.interface.pytorch.nodes.norm import BatchNorm2d, InstanceNorm2d, LayerNorm
 from src.interface.pytorch.nodes.pool import AveragePool2d, MaxPool2d
 
 P = 0.33
@@ -45,8 +45,8 @@ class TestNorm:
     def test_instancenorm2d(self) -> None:
         use_layer_methods(InstanceNorm2d)
 
-    # def test_layernorm(self) -> None:
-    #     use_layer_methods(LayerNorm)
+    def test_layernorm(self) -> None:
+        use_layer_methods(LayerNorm)
 
     # def test_groupnorm(self) -> None:
     #     use_layer_methods(GroupNorm)
