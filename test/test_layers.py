@@ -1,5 +1,5 @@
 from src.interface.layer import Layer
-from src.interface.pytorch.nodes.activations import ELU, Hardswish, LeakyReLU, PReLU, ReLU
+from src.interface.pytorch.nodes.activations import ELU, Hardswish, LeakyReLU, PReLU, ReLU, Sigmoid, Tanh
 from src.interface.pytorch.nodes.conv import Conv2d, UpConv2d
 from src.interface.pytorch.nodes.drop import Dropout, Dropout2d
 from src.interface.pytorch.nodes.linear import Linear
@@ -80,3 +80,9 @@ class TestActivations:
 
     def test_LeakyReLU(self) -> None:
         use_layer_methods(LeakyReLU)
+
+    def test_Sigmoid(self) -> None:
+        use_layer_methods(Sigmoid)
+
+    def test_Tanh(self) -> None:
+        use_layer_methods(Tanh)
