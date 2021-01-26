@@ -1,10 +1,19 @@
 from src.interface.layer import Layer
-from src.interface.pytorch.nodes.activations import ELU, Hardswish, LeakyReLU, PReLU, ReLU, Sigmoid, Tanh
+from src.interface.pytorch.nodes.activations import (
+    ELU,
+    Hardswish,
+    LeakyReLU,
+    PReLU,
+    ReLU,
+    Sigmoid,
+    Tanh,
+)
 from src.interface.pytorch.nodes.conv import Conv2d, UpConv2d
 from src.interface.pytorch.nodes.drop import Dropout, Dropout2d
 from src.interface.pytorch.nodes.linear import Linear
 from src.interface.pytorch.nodes.norm import BatchNorm2d, InstanceNorm2d, LayerNorm
 from src.interface.pytorch.nodes.pool import AveragePool2d, MaxPool2d
+from src.interface.pytorch.nodes.pad import ZeroPadding, ReplicationPadding, ReflectionPadding
 
 P = 0.33
 
@@ -86,3 +95,14 @@ class TestActivations:
 
     def test_Tanh(self) -> None:
         use_layer_methods(Tanh)
+
+
+class TestPad:
+    def test_ZeroPad(self) -> None:
+        use_layer_methods(ZeroPadding)
+
+    def test_ReplicationPadding(self) -> None:
+        use_layer_methods(ReplicationPadding)
+
+    def test_ReflectionPadding(self) -> None:
+        use_layer_methods(ReflectionPadding)
