@@ -6,7 +6,8 @@
 
 MNIST
 lightning_logs
-
+test/test_individual_outputs.txt
+.idea
 
 
 
