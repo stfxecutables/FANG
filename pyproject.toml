@@ -15,3 +15,11 @@ filterwarnings = [
     # note the use of single quote below to denote "raw" strings in TOML
     'ignore:the imp module is deprecated:DeprecationWarning',
 ]
+markers = [
+    "fast: tests that generally run quickly",
+    "medium: tests that are somewhere between fast and slow",
+    "slow: tests that generally take 5+ minutes to execute",
+    "perf: tests of performance rather than correctness",
+    "plot: tests plotting functions that need manual inspection",
+    "spec: tests that classes and functions meet specified behaviours",
+]
