@@ -4,7 +4,7 @@ import statistics
 
 
 class population:
-    """Build an population from individuals.
+    """Build a population from individuals.
     Pick up the best individuals from population according to fitness.
     Best fit individuals are selected as parents.
     """
