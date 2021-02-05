@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union, no_type_check
+from typing import Dict, List, Optional, Tuple, Union, no_type_check
 
 import numpy as np
 import torch
@@ -168,7 +168,7 @@ class Individual:
         self.sequential_model = self.__sequential()
         self.optimizer: TorchOptimizer = np.random.choice(TORCH_OPTIMIZERS)()
 
-        self.fitness = None
+        self.fitness: Optional[float] = None
 
     def evaluate_fitness(self) -> None:
         results = train_sequential(self.sequential_model, self.optimizer)
@@ -224,6 +224,20 @@ class Individual:
         interfaces = [*self.layers, self.output_layer]
         return IndividualModel(all_layers, interfaces)
 
+    def __copy__(self) -> str:
+        # NOTE: YOU MAY NOT MODIFY THIS FUNCTION
+        raise RuntimeError(
+            "You may not copy Individual objects directly. Use `Individual.clone()` if you need "
+            "a deep copy, or just assign a reference instead if you need a shallow copy."
+        )
+
+    def __deepcopy__(self, memo: Dict) -> None:
+        # NOTE: YOU MAY NOT MODIFY THIS FUNCTION
+        raise RuntimeError(
+            "Individual objects cannot be copied with `deepcopy`. "
+            "Use `Individual.clone()` instead."
+        )
+
     def __str__(self) -> str:
         info = ["\r\n"]
         for i, layer in enumerate(self.layers):
@@ -233,3 +247,5 @@ class Individual:
         info.append("\r\n")
         info.append(f"(Optimizer) {self.optimizer}")
         return "".join(info)
+
+    __repr__ = __str__
