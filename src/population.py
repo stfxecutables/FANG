@@ -77,6 +77,14 @@ class Population(Evolver):
     framework: "pytorch" | "Tensorflow"
         Which framework to use for instantiating and training the models.
 
+    attempts_per_individual: int = 3
+        Random network generation can produce networks which, due to convolutions, produce feature
+        maps with zero or negative size. When this happens, a `VanishingError` is raised. However,
+        with sufficient attempts, you can usually ensure a valid network is created. The value set
+        here determines how many `VanishingError`s are allowed before a genuine error is raised and
+        execution is halted. It is important to not allow infinite attempts here since otherwise we
+        can get stuck endlessly attempting to generate new individuals.
+
     Notes
     -----
     This class is ultimately not necessary, but is logically obvious and will help make the code
@@ -98,12 +106,23 @@ class Population(Evolver):
     ) -> None:
         # NOTE: YOU SHOULD NOT NEED TO MODIFY THIS FUNCTION
         if isinstance(individuals, list):
-            self.individuals: List[Individual] = individuals
+            self.individuals: List[Individual] = self.__validate_individuals(individuals)
             self.fitnesses: List[Optional[float]] = list(
                 map(lambda ind: ind.fitness, self.individuals)
             )
+            ind = individuals[0]
+            self.input_shape = ind.input_shape
+            self.output_shape = ind.output_shape
+            self.task = ind.task
+            self.is_sequential = ind.is_sequential
+            self.framework = ind.framework
             return
 
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+        self.task = task
+        self.is_sequential = sequential
+        self.framework = framework
         self.fitnesses = []
         self.individuals = []
         for _ in range(int(individuals)):
@@ -126,15 +145,15 @@ class Population(Evolver):
                 break
 
     def __len__(self) -> int:
-        # NOTE: YOU MAY NOT MODIFY THIS FUNCTION
+        # NOTE: DO NOT MODIFY THIS FUNCTION
         return len(self.individuals)
 
     def __iter__(self) -> Iterator[Individual]:
-        # NOTE: YOU MAY NOT MODIFY THIS FUNCTION
+        # NOTE: DO NOT MODIFY THIS FUNCTION
         return iter(self.individuals)
 
     def __getitem__(self, i: int) -> Individual:
-        # NOTE: YOU MAY NOT MODIFY THIS FUNCTION
+        # NOTE: DO NOT MODIFY THIS FUNCTION
         return self.individuals[i]
 
     def __str__(self) -> str:
@@ -143,20 +162,54 @@ class Population(Evolver):
         return f"Population of size {len(self.individuals)} (fitnesses {e})."
 
     def __copy__(self) -> str:
-        # NOTE: YOU MAY NOT MODIFY THIS FUNCTION
+        # NOTE: DO NOT MODIFY THIS FUNCTION
         pop = Population(0)
         for key, val in self.__dict__.items():
             setattr(pop, key, val)
         return pop
 
     def __deepcopy__(self, memo: Dict) -> None:
-        # NOTE: YOU MAY NOT MODIFY THIS FUNCTION
+        # NOTE: DO NOT MODIFY THIS FUNCTION
         raise RuntimeError(
             "Population objects cannot be copied with `deepcopy`. "
             "Use `Population.clone()` instead."
         )
 
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, Population):
+            return NotImplemented
+        for i1, i2 in zip(self.individuals, o.individuals):
+            if i1 != i2:
+                return False
+        return True
+
     __repr__ = __str__
+
+    @staticmethod
+    def __validate_individuals(individuals: List[Individual]) -> List[Individual]:
+        input_shape = individuals[0].input_shape
+        output_shape = individuals[0].output_shape
+        task = individuals[0].task
+        is_sequential = individuals[0].is_sequential
+        framework = individuals[0].framework
+        for individual in individuals:
+            if individual.input_shape != input_shape:
+                raise ValueError("All `Individual`s in a `Population` must share input shapes.")
+            if individual.output_shape != output_shape:
+                raise ValueError("All `Individual`s in a `Population` must share output shapes.")
+            if individual.task != task:
+                raise ValueError(
+                    "All `Individual`s in a `Population` must perform identical tasks."
+                )
+            if individual.is_sequential != is_sequential:
+                raise ValueError(
+                    "Currently all `Individual`s in a `Population` must all be sequential."
+                )
+            if individual.framework != framework:
+                raise ValueError(
+                    "All `Individual`s in a `Population` must be implemented in the same framework."
+                )
+        return individuals
 
     def evaluate_fitnesses(self) -> None:
         # NOTE: YOU SHOULD NOT NEED TO MODIFY THIS FUNCTION

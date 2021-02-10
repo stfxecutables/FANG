@@ -1,3 +1,5 @@
+import pytest
+
 from src.interface.layer import Layer
 from src.interface.pytorch.nodes.activations import (
     ELU,
@@ -31,6 +33,7 @@ def use_layer_methods(layer: Layer) -> None:
     print(instance.mutate(P))
 
 
+@pytest.mark.spec
 class TestPool:
     def test_max2d(self) -> None:
         use_layer_methods(MaxPool2d)
@@ -39,6 +42,7 @@ class TestPool:
         use_layer_methods(AveragePool2d)
 
 
+@pytest.mark.spec
 class TestConv:
     def test_conv2d(self) -> None:
         use_layer_methods(Conv2d)
@@ -47,6 +51,7 @@ class TestConv:
         use_layer_methods(UpConv2d)
 
 
+@pytest.mark.spec
 class TestNorm:
     def test_bnorm2d(self) -> None:
         use_layer_methods(BatchNorm2d)
@@ -61,6 +66,7 @@ class TestNorm:
     #     use_layer_methods(GroupNorm)
 
 
+@pytest.mark.spec
 class TestDrop:
     def test_dropout(self) -> None:
         use_layer_methods(Dropout)
@@ -69,11 +75,13 @@ class TestDrop:
         use_layer_methods(Dropout2d)
 
 
+@pytest.mark.spec
 class TestLinear:
     def test_linear(self) -> None:
         use_layer_methods(Linear)
 
 
+@pytest.mark.spec
 class TestActivations:
     def test_ReLU(self) -> None:
         use_layer_methods(ReLU)
@@ -97,6 +105,7 @@ class TestActivations:
         use_layer_methods(Tanh)
 
 
+@pytest.mark.spec
 class TestPad:
     def test_ZeroPad(self) -> None:
         use_layer_methods(ZeroPadding)
