@@ -1,4 +1,5 @@
 import os
+import platform
 from typing import Any, Optional
 
 import pytorch_lightning as pl
@@ -8,13 +9,14 @@ from torchvision import transforms
 from torchvision.datasets import MNIST
 
 BATCH_SIZE = 64
+NUM_WORKERS = 0 if platform.system().lower() == "windows" else 4
 
 
 class MNISTDataModule(pl.LightningDataModule):
     def __init__(
         self,
         batch_size: int = BATCH_SIZE,
-        num_workers: int = 4,
+        num_workers: int = NUM_WORKERS,
         seed: int = None,
         fast_dev_run: bool = False,
     ) -> None:
