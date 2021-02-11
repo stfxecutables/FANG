@@ -1,5 +1,7 @@
 from __future__ import annotations
+from os import replace
 import sys
+from src.crossover import cross_individuals
 from src.individual import Individual, Task
 from src.interface.evolver import Evolver
 from src.interface.initializer import Framework
@@ -16,6 +18,8 @@ from pandas import DataFrame, Series
 
 from typing import Any, List, Tuple
 from typing_extensions import Literal
+
+PairingMethod = Literal["random", "best", "weighted-random"]
 
 
 class Population(Evolver):
@@ -85,6 +89,10 @@ class Population(Evolver):
         execution is halted. It is important to not allow infinite attempts here since otherwise we
         can get stuck endlessly attempting to generate new individuals.
 
+    fast_dev_run: bool = False
+        If True, then training is with only 5000 samples of the MNIST data rather than the full
+        55000. For testing basic behaviour more quickly.
+
     Notes
     -----
     This class is ultimately not necessary, but is logically obvious and will help make the code
@@ -103,8 +111,11 @@ class Population(Evolver):
         activation_interval: int = 0,
         framework: Framework = "pytorch",
         attempts_per_individual: int = 3,
+        fast_dev_run: bool = False,
     ) -> None:
         # NOTE: YOU SHOULD NOT NEED TO MODIFY THIS FUNCTION
+        self.fast_dev_run = fast_dev_run
+
         if isinstance(individuals, list):
             self.individuals: List[Individual] = self.__validate_individuals(individuals)
             self.fitnesses: List[Optional[float]] = list(
@@ -116,13 +127,18 @@ class Population(Evolver):
             self.task = ind.task
             self.is_sequential = ind.is_sequential
             self.framework = ind.framework
+            self.activation_interval = -1
             return
+
+        if task is None:
+            raise ValueError("Must specify type of network in `task`.")
 
         self.input_shape = input_shape
         self.output_shape = output_shape
         self.task = task
         self.is_sequential = sequential
         self.framework = framework
+        self.activation_interval = activation_interval
         self.fitnesses = []
         self.individuals = []
         for _ in range(int(individuals)):
@@ -215,7 +231,7 @@ class Population(Evolver):
         # NOTE: YOU SHOULD NOT NEED TO MODIFY THIS FUNCTION
         for individual in self.individuals:
             try:  # we want this to be fail-proof
-                individual.evaluate_fitness()
+                individual.evaluate_fitness(self.fast_dev_run)
             except Exception as e:
                 print(e, file=sys.stderr)
                 individual.fitness = -1.0
@@ -264,7 +280,7 @@ class Population(Evolver):
         raise NotImplementedError()
 
     def get_crossover_pairs(
-        self, n_pairs: int, method: Literal["random", "best", "weighted-random"]
+        self, n_pairs: int, method: PairingMethod
     ) -> List[Tuple[Individual, Individual]]:
         """Generate `n_pairs` pairings of individuals to be used in crossover
 
@@ -293,4 +309,36 @@ class Population(Evolver):
         original individuals.
         """
         raise NotImplementedError()
+
+    def crossover(self, method: PairingMethod = "random") -> Population:
+        """Generate crossover pairs, perform crossover, and select a random amount for the offspring
+
+        Parameters
+        ----------
+        method: "random" | "best" | "weighted-random"
+            If "random", just randomly pair off individuals.
+
+            If "best", and len(self) is N, generate the N pairs of individuals where each pair
+            includes the individual with the highest fitness
+
+            If "weighted-random", randomly select pairs, but where the probability of selecting an
+            individual is scaled to the fitness.
+
+        Returns
+        -------
+        crossed: Population
+            A `Population` with the same number of individuals as the generating population.
+        """
+        pairs = self.get_crossover_pairs(n_pairs=len(self), method=method)
+        crosses = []
+        for ind1, ind2 in pairs:
+            crosses.extend(cross_individuals(ind1, ind2))
+        offspring = np.random.choice(crosses, size=len(self), replace=False).tolist()
+        return Population(
+            offspring,
+            task=self.task,
+            input_shape=self.input_shape,
+            output_shape=self.output_shape,
+            sequential=self.is_sequential,
+        )
 

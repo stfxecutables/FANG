@@ -6,38 +6,46 @@ import pytest
 
 from src.exceptions import VanishingError
 from src.individual import Individual
+from test.utils import get_individual
 
 LOGFILE = Path(__file__).resolve().parent / "test_individual_outputs.txt"
 
 
-def get_individual(attempts: int = 10) -> Individual:
-    ind = None
-    for i in range(attempts):
-        try:
-            return Individual(
-                n_nodes=10, task="classification", input_shape=(1, 28, 28), output_shape=10
-            )
-        except VanishingError:
-            continue
-        except RuntimeError as e:
-            if "mat1 dim 1 must match mat2 dim 0" in str(e):
-                continue
-            else:
-                raise e
-    return ind
-
-
-@pytest.mark.spec
-def test_mutate() -> None:
-    ind = get_individual(1000)
-    mutated = ind.mutate(prob=0.5)
-    assert ind != mutated
-
 @pytest.mark.spec
 def test_create() -> None:
-    ind = get_individual(1000)
+    ind = get_individual(50)
     print(ind)
     print(ind.torch_model)
+
+
+class TestCloning:
+    @pytest.mark.spec
+    def test_fitness(self) -> None:
+        for _ in range(10):
+            ind = get_individual(50)
+
+            # test fitness cloning
+            ind.fitness = 0.5
+            clone = ind.clone(clone_fitness=True)
+            assert clone.fitness == ind.fitness
+
+    def test_sequential_clone(self) -> None:
+        for _ in range(10):
+            ind = get_individual(50)
+            clone = ind.clone(sequential="clone")
+            assert clone.fitness == ind.fitness
+            assert str(clone.torch_model) == str(ind.torch_model)
+
+    @pytest.mark.spec
+    def test_sequential_create(self) -> None:
+        for _ in range(10):
+            ind = get_individual(50)
+            clone = ind.clone(sequential="create")
+            assert clone.fitness == ind.fitness
+            assert str(clone.torch_model) == str(ind.torch_model)
+
+            # test sequential cloning
+
 
 def test_individual(capsys: Any) -> None:
     # SEED = 2

@@ -4,10 +4,11 @@ from typing import cast, no_type_check
 from typing_extensions import Literal
 
 
-def cross(
+def cross_individuals(
     ind1: Individual, ind2: Individual, n_pairs: int = 1
 ) -> List[Tuple[Individual, Individual]]:
-    """Return crossovers of `ind1` and `ind2`.
+    """Return crossovers of `ind1` and `ind2`. Ensures the crossed individuals are all valid
+    (because the probability of a random cross being valid is very small).
 
     Parameters
     ----------

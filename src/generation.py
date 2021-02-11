@@ -1,9 +1,9 @@
 from __future__ import annotations
 from enum import Enum
 
-from pandas.core import frame
-from interface.arguments import ArgMutation
-from interface.pytorch.optimizer import Optimizer
+from src.hall_of_fame import HallOfFame
+from src.interface.arguments import ArgMutation
+from src.interface.pytorch.optimizer import Optimizer
 from src.individual import Individual
 from src.population import Population
 from src.interface.evolver import Evolver
@@ -25,50 +25,6 @@ import pandas as pd
 import seaborn as sbn
 from numpy import ndarray
 from pandas import DataFrame, Series
-
-
-class HallOfFame:
-    """Class for storing the best individuals seen over an entire run
-
-    Parameters
-    ----------
-    size: int
-        The maximum allowed number of individuals allowed in the hall.
-    """
-
-    def __init__(self, size: int = 10) -> None:
-        self.size = int(size)
-        self.hall: List[Individual] = []
-
-    def __len__(self) -> int:
-        return len(self.hall)
-
-    def update(self, survivors: List[Individual]) -> None:
-        """Compare the individuals in `survivors` to those in `self.hall`, and update `self.hall` to
-        include the individuals with the `size` highest-fitness individuals from both
-
-        Parameters
-        ----------
-        survivors: List[Individual]
-            List of individuals that have survived selection.
-        """
-        raise NotImplementedError()
-
-    def save(self, directory: Path) -> None:
-        """Save the hall of fame individuals to `directory`.
-
-        Parameters
-        ----------
-        directory: Path
-            Location to save models. Must be a directory (folder)
-
-        Note
-        ----
-        We need to make a strong distinction between saving the architecture and saving the trained
-        model.
-        """
-        assert directory.is_dir()
-        raise NotImplementedError()
 
 
 class State(Enum):
@@ -218,6 +174,7 @@ class Generation:
         framework: Framework = "pytorch",
         attempts_per_individual: int = 3,
         attempts_per_generation: int = 1,
+        fast_dev_run: bool = False,
     ):
         self.state: State = State.INITIALIZED
         self.survival_threshold: float = float(survival_threshold)
@@ -249,6 +206,7 @@ class Generation:
         self.attempts_per_individual = attempts_per_individual
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
+        self.fast_dev_run: bool = fast_dev_run
 
         self.progenitors = Population(
             individuals=self.size,
@@ -260,6 +218,7 @@ class Generation:
             activation_interval=self.activation_interval,
             framework=self.framework,
             attempts_per_individual=self.attempts_per_individual,
+            fast_dev_run=self.fast_dev_run,
         )
 
     @classmethod
@@ -279,6 +238,7 @@ class Generation:
         activation_interval: int = 0,
         attempts_per_individual: int = 3,
         attempts_per_generation: int = 1,
+        fast_dev_run: bool = False,
     ) -> Generation:
         self: Generation = cls.__new__(cls)
 
@@ -311,25 +271,30 @@ class Generation:
         self.attempts_per_individual = attempts_per_individual
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
+        self.fast_dev_run = fast_dev_run
+        population.fast_dev_run = self.fast_dev_run  # ensure we override this
         return self
 
     def __str__(self) -> str:
+        info = f"Generation (stage={self.state})."
         if self.state == State.INITIALIZED:
-            return f"Generation (stage={self.state}, {len(self.progenitors)} progenitors."
-        elif self.state == State.EVALUATED:  # EVALUATED
+            return f"{info} {len(self.progenitors)} progenitors."
+        elif self.state == State.EVALUATED:
+            return f"{info} {len(self.progenitors)} evaluated `Individual`s."
+        elif self.state == State.SURVIVED:
             return (
-                f"Generation (stage={self.state}, {len(self.progenitors)} evaluated `Individual`s."
-            )
-        elif self.state == State.SURVIVED:  # SURVIVED
-            return f"Generation (stage={self.state}, {len(self.survivors)} survivors for threshold={self.survival_threshold}."
-        elif self.state == State.SAVED:  # SURVIVED
-            return f"Generation (stage={self.state}, {len(self.survivors)} survivors, {len(self.hall)} in Hall of Fame."
-        elif self.state == State.MUTATED:  # MUTATED
-            return f"Generation (stage={self.state}, {len(self.mutated)} mutated `Individual`s."
-        elif self.state == State.CROSSED:  # CROSSED
-            return f"Generation (stage={self.state}, {len(self.crossed)} crossed `Individual`s."
-        elif self.state == State.REPRODUCED:  # REPRODUCED
-            return f"Generation (stage={self.state}, {len(self.offspring)} surviving offspring."
+                f"{info} {len(self.survivors)} survivors for threshold={self.survival_threshold}."
+            )  # type: ignore # noqa
+        elif self.state == State.SAVED:
+            return (
+                f"{info} {len(self.survivors)} survivors, {len(self.hall)} in Hall of Fame."
+            )  # type: ignore # noqa
+        elif self.state == State.MUTATED:
+            return f"{info} {len(self.mutated)} mutated `Individual`s."  # type: ignore
+        elif self.state == State.CROSSED:
+            return f"{info} {len(self.crossed)} crossed `Individual`s."  # type: ignore
+        elif self.state == State.REPRODUCED:
+            return f"{info} {len(self.offspring)} surviving offspring."  # type: ignore
         else:
             raise ValueError("Impossible `Generation` state.")
 
@@ -338,9 +303,11 @@ class Generation:
     def next(self, survivor_dir: Path = None) -> Generation:
         """Perform the entire set of evolutionary steps:
 
-        1. Compute fitnesses for the staring population (progenitors)
+        1. Compute fitnesses for the starting population (progenitors)
         2. Select survivors based on a threshold
-        3.
+        3. Save survivors into hall of fame and to disk, for resuming later
+        4. Perform mutation (and optionally crossover)
+        5. Return the offspring of above as a fresh Generation
 
         """
         self.evaluate_fitnesses()
@@ -407,7 +374,7 @@ class Generation:
         assert self.state == State.SURVIVED
         assert self.survivors is not None
 
-        self.hall.update(self.survivors)  # type: ignore
+        self.hall.update(self.survivors)
         if self.hall_dir is not None:
             self.hall.save(self.hall_dir)
         if survivor_dir is not None:
@@ -450,7 +417,6 @@ class Generation:
         self.state = State.REPRODUCED
 
     def filter_by_fitness(self) -> Population:
-        """Get a population of individuals from self.progenitors that all have
-        fitness above `self.survival_threshold`"""
+        """Get a population of individuals from self.progenitors that all have fitness above
+        `self.survival_threshold`. Must return *references*, and not copies."""
         raise NotImplementedError()
-

@@ -11,24 +11,14 @@ import pytest
 import numpy as np
 from src.population import Population
 from src.individual import Individual
-
-
-def new_pop(n_individuals: int = 10, attempts: int = 10) -> Population:
-    return Population(
-        individuals=n_individuals,
-        n_nodes=np.random.randint(7, 13),
-        task="classification",
-        input_shape=(1, 28, 28),
-        output_shape=10,
-        attempts_per_individual=attempts,
-    )
+from test.utils import get_pop
 
 
 @pytest.mark.spec
 @pytest.mark.fast
 class TestPopulation:
     def test_init_from_individuals(self) -> None:
-        individuals = []
+        individuals: List[Individual] = []
         errors = 0
         while len(individuals) < 10 and errors < 100:
             try:
@@ -47,11 +37,11 @@ class TestPopulation:
         assert len(pop) == 10
 
     def test_init_from_int(self) -> None:
-        pop = new_pop(10)
+        pop = get_pop(10)
         assert len(pop) == 10
 
     def test_clone(self) -> None:
-        pop = new_pop(10)
+        pop = get_pop(10)
         clone = pop.clone()
         assert isinstance(clone, Population)
         assert len(pop) == len(clone)
@@ -72,7 +62,7 @@ class TestPopulation:
                 ) from e
 
     def test_mutate(self) -> None:
-        pop = new_pop(10)
+        pop = get_pop(10)
         mutated = pop.mutate(0.9)
         assert len(mutated) == len(pop)
         assert mutated is not pop
@@ -91,11 +81,55 @@ class TestPopulation:
                     "You must mutate a clone only."
                 ) from e
 
+    def test_select_best(self) -> None:
+        for n in range(10):
+            pop = get_pop(10)
+            best = pop.select_best(n)
+            assert len(best) == n
+            for i in range(len(pop) - 1):
+                assert pop[i].fitness >= pop[i + 1].fitness
+            for ind in best:
+                for orig in pop:
+                    if str(ind) == str(orig):
+                        try:
+                            assert ind is orig
+                        except AssertionError as e:
+                            raise RuntimeError(
+                                "When getting the best members, you should not clone."
+                            ) from e
+
+    def test_get_crossover_pairs(self) -> None:
+        for n in range(10):
+            pop = get_pop(10)
+            pairs = pop.get_crossover_pairs(n, method="random")
+            assert isinstance(pairs, list)
+            assert len(pairs) == n
+            for pair in pairs:
+                assert isinstance(pair, tuple)
+                ind1, ind2 = pair
+                assert isinstance(ind1, Individual)
+                assert isinstance(ind2, Individual)
+                assert ind1 in pop.individuals  # make sure we got references
+                assert ind2 in pop.individuals
+                assert ind1 != ind2
+
+    def test_crossover(self) -> None:
+        for n in range(10):
+            pop = get_pop(10)
+            crossed = pop.crossover()
+            assert isinstance(crossed, Population)
+            assert len(crossed) == len(pop)
+            for cross in crossed:
+                assert cross not in pop.individuals
+                for ind in pop:
+                    # impossible for crossover to create offspring identical to parents
+                    assert ind != cross
+
 
 @pytest.mark.fast
 class TestPopulationTests:
     def test_test_get_best(self) -> None:
-        pop = new_pop(10)
+        pop = get_pop(10)
         fitnesses = np.linspace(0.95, 0.05, 10)
         for ind, fitness in zip(pop, fitnesses):
             ind.fitness = fitness
@@ -115,8 +149,8 @@ class TestPopulationTests:
                             ) from e
 
     def test_test_mutate(self) -> None:
-        pop = new_pop(10)
-        mutated = new_pop(10)
+        pop = get_pop(10)
+        mutated = get_pop(10)
         assert len(mutated) == len(pop)
         assert mutated is not pop
         assert mutated.individuals is not pop.individuals

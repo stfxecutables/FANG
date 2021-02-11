@@ -40,6 +40,9 @@ which must be implemented by:
 - ✗ `Population.mutate()`
 - ✗ `Population.select_best()`
 - ✗ `Population.get_crossover_pairs()`
+  - ✗ `Population.get_crossover_pairs(method="random")`
+  - ✗ `Population.get_crossover_pairs(method="best")`
+  - ✗ `Population.get_crossover_pairs(method="weighted-random")`
 - ✗ `Population.crossover()`
 
 need to be implemented, which means implementing:
@@ -53,7 +56,9 @@ need to be implemented, which means implementing:
 This isn't needed right now to get things working, since you can call construt a `Generation` that
 does not use crossover during evolution, but we do want this implemented.
 
-- `cross()`
+**TODO**
+
+- ✗ `cross_individuals()`
 
 
 ## `src/generation.py`
@@ -66,13 +71,15 @@ does not use crossover during evolution, but we do want this implemented.
 - ✓ `Generation.next()`
 - ✓ `Generation.evaluate_fitnesses()`
 - ✓ `Generation.get_survivors()`
+- ✓ `Generation.set_offspring()`
+
+**Implemented when Dependencies are Implemented**
 - ✓ `Generation.save_progress()`
-  - **Note**: this will work when `Individual.save`, `Population.save`, and `HallOfFame.update` are implemented
+  - Dependencies: `Individual.save`, `Population.save`, `HallOfFame.update`
 - ✓ `Generation.mutate_survivors()`
-  - **Note**: this will work with full functionality when all `Individual.mutate_...` options are implemented
+  - Dependencies: all `Individual.mutate_...` options and functions
 - ✓ `Generation.cross()`
-  - **Note**: this will work when `crossover()` in `src/crossover.py` is implemented, and when
-    `Population.crossover()` is implemented
+  - Dependencies: `Population.crossover()`, and `crossover()` in `src/crossover.py`
 
 **TODO**
 

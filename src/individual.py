@@ -210,8 +210,8 @@ class Individual:
         # TODO: Do better than this!
         return str(self) == str(o)
 
-    def evaluate_fitness(self) -> None:
-        results = train_sequential(self.torch_model, self.optimizer)
+    def evaluate_fitness(self, fast_dev_run: bool = False) -> None:
+        results = train_sequential(self.torch_model, self.optimizer, fast_dev_run)
         # Results is a dict with keys:
         # {'test_acc', 'test_loss', 'val_acc', 'val_loss'}
         self.fitness = results["test_acc"]

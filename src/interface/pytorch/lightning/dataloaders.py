@@ -12,12 +12,17 @@ BATCH_SIZE = 64
 
 class MNISTDataModule(pl.LightningDataModule):
     def __init__(
-        self, batch_size: int = BATCH_SIZE, num_workers: int = 4, seed: int = None
+        self,
+        batch_size: int = BATCH_SIZE,
+        num_workers: int = 4,
+        seed: int = None,
+        fast_dev_run: bool = False,
     ) -> None:
         super().__init__()
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.seed = seed
+        self.fast_dev_run: bool = fast_dev_run
 
     def prepare_data(self, *args: Any, **kwargs: Any) -> None:
         # download only
@@ -33,6 +38,8 @@ class MNISTDataModule(pl.LightningDataModule):
         # train/val split
         gen = t.Generator().manual_seed(self.seed) if self.seed is not None else None
         mnist_train, mnist_val = random_split(mnist_train, [55000, 5000], gen)
+        if self.fast_dev_run:
+            mnist_train, _ = random_split(mnist_train, [5000, 50000], gen)
 
         # assign to use in dataloaders
         self.train_dataset = mnist_train
