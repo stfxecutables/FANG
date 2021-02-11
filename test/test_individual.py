@@ -90,8 +90,7 @@ def test_individual(capsys: Any) -> None:
         try:
             with capsys.disabled():
                 print(ind)
-                print(ind.torch_model)
-                ind.evaluate_fitness()
+                ind.evaluate_fitness(fast_dev_run=True)
                 log(ind)
         except RuntimeError as e:
             if "Output size is too small" in str(e):
@@ -106,7 +105,6 @@ def test_individual(capsys: Any) -> None:
             elif "mat1 dim 1 must match mat2 dim 0" in str(e):
                 with capsys.disabled():
                     print(ind)
-                    print(ind.torch_model)
                     log(str(e))
                 raise e
             else:
