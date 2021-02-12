@@ -189,7 +189,7 @@ class Arguments(Evolver):
         self._randomize_argvals()
 
     def clone(self) -> Arguments:
-        """Get an identical but indepenent copy of the Arguments"""
+        """Get an identical but independent copy of the Arguments"""
         cloned = Arguments({})
         cloned.arg_values = deepcopy(self.arg_values)
         cloned.arg_definitions = deepcopy(self.arg_definitions)

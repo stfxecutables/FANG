@@ -9,10 +9,20 @@ from src.interface.pytorch.lightning.model import LightningSequential
 from src.interface.pytorch.optimizer import Optimizer as TorchOptimizer
 
 
-def train_sequential(model: t.nn.Module, optimizer: TorchOptimizer) -> Dict[str, Any]:
-    mnist = MNISTDataModule()  # type: ignore
+def train_sequential(
+    model: t.nn.Module, optimizer: TorchOptimizer, fast_dev_run: bool = False
+) -> Dict[str, Any]:
+    EPOCHS = 1
+    mnist = MNISTDataModule(fast_dev_run=fast_dev_run)  # type: ignore
     lightning_model = LightningSequential(model, optimizer)
-    trainer = pl.Trainer(gpus=int(t.cuda.is_available()), max_epochs=1, val_check_interval=0.25)
+    if fast_dev_run:
+        trainer = pl.Trainer(
+            gpus=int(t.cuda.is_available()), max_epochs=1, check_val_every_n_epoch=2
+        )
+    else:
+        trainer = pl.Trainer(
+            gpus=int(t.cuda.is_available()), max_epochs=EPOCHS, val_check_interval=0.25
+        )
     trainer.fit(lightning_model, mnist)  # type: ignore
     results = trainer.test()[0]
     pprint(results)

@@ -45,7 +45,7 @@ class Conv(ReshapingLayer):
     MAX_OUT_CHANNELS = 512
     MAX_PAD = 5  # TODO: tie to kernel_size, string, padding, and dilation instead
     MAX_DILATE = 5
-    MAX_KERNEL = 13
+    MAX_KERNEL = 7
     MAX_STRIDE = 2
     PADDING_MODES = ("zeros", "reflect", "replicate", "circular")
 

@@ -51,4 +51,20 @@ class ELU(Activation):
         self.torch = torch.nn.ELU(**args)
 
 
-IMPLEMENTED = [ELU, Hardswish, LeakyReLU, PReLU, ReLU]
+class Sigmoid(Activation):
+
+    def create(self) -> None:
+        if self.torch is not None:  # type: ignore
+            return
+        self.torch = torch.nn.Sigmoid()
+
+
+class Tanh(Activation):
+
+    def create(self) -> None:
+        if self.torch is not None:  # type: ignore
+            return
+        self.torch = torch.nn.Tanh()
+
+
+IMPLEMENTED = [ELU, Hardswish, LeakyReLU, PReLU, ReLU, Sigmoid, Tanh]

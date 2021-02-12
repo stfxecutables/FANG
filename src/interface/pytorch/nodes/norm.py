@@ -1,14 +1,21 @@
 from __future__ import annotations  # noqa
-
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from copy import deepcopy
 import torch
-
+from torch.nn import Module
 from src.interface.initializer import PyTorch
-from src.interface.layer import Layer
+from src.interface.layer import Layer, ReshapingLayer
 
 
 class BatchNorm2d(Layer, PyTorch):
+    """
+    A “momentum” argument allows you to control how much of the statistics from the previous mini batch to include
+    when the update is calculated. By default, this is kept high with a value of 0.99. This can be set to 0.0 to only
+    use statistics from the current mini-batch
+    """
+
     MAX_MOMENTUM = 1.0
-    ARGS = {"momentum": ("float", (0, MAX_MOMENTUM))}
+    ARGS = {"momentum": ("float", (0, MAX_MOMENTUM)), "affine": ("bool", None)}
 
     def create(self) -> None:
         """Make the actual Torch Layer object, and save it for later"""
@@ -22,7 +29,11 @@ class BatchNorm2d(Layer, PyTorch):
 
 class InstanceNorm2d(Layer, PyTorch):
     MAX_MOMENTUM = 1.0
-    ARGS = {"momentum": ("float", (0, MAX_MOMENTUM)), "affine": ("bool", None)}  # type: ignore
+    ARGS = {
+        "momentum": ("float", (0, MAX_MOMENTUM)),
+        "affine": ("bool", None),
+        "track_running_stats": ("bool", None),
+    }  # type: ignore
 
     def create(self) -> None:
         """Make the actual Torch Layer object, and save it for later"""
@@ -35,8 +46,26 @@ class InstanceNorm2d(Layer, PyTorch):
 
 
 class LayerNorm(Layer, PyTorch):
-    def __init__(self) -> None:
-        raise NotImplementedError("TODO!")
+    ARGS = {
+        "elementwise_affine": ("bool", None),  # type: ignore
+        "normalized_shape_i": ("int", (0, 3)),
+    }
+
+    # def __init__(self, input_shape: Tuple[int, ...], normalized_shape: Tuple[int, ...]):
+    #     super().__init__(input_shape)
+    #     self.input_shape = input_shape
+    #     self.normalized_shape = input_shape[0]
+
+    def create(self) -> None:
+        args = deepcopy(self.args.arg_values)  # gets dict
+        i = args["normalized_shape_i"]
+        args["normalized_shape"] = self.input_shape[i:]
+        del args["normalized_shape_i"]
+        del args["in_channels"]
+        self.torch = torch.nn.LayerNorm(**args)
+
+    def _output_shape(self) -> Tuple[int, ...]:
+        pass
 
 
 class GroupNorm(Layer, PyTorch):
@@ -63,4 +92,4 @@ losses on the space of architectures that is searched.
         )
 
 
-IMPLEMENTED = [BatchNorm2d, InstanceNorm2d]
+IMPLEMENTED = [BatchNorm2d, InstanceNorm2d, LayerNorm]
