@@ -2,11 +2,49 @@ from pathlib import Path
 from typing import Any, Union
 
 import numpy as np
+import pytest
 
 from src.exceptions import VanishingError
 from src.individual import Individual
+from test.utils import get_individual
 
 LOGFILE = Path(__file__).resolve().parent / "test_individual_outputs.txt"
+
+
+@pytest.mark.spec
+def test_create() -> None:
+    ind = get_individual(50)
+    print(ind)
+    print(ind.torch_model)
+
+
+class TestCloning:
+    @pytest.mark.spec
+    def test_fitness(self) -> None:
+        for _ in range(10):
+            ind = get_individual(50)
+
+            # test fitness cloning
+            ind.fitness = 0.5
+            clone = ind.clone(clone_fitness=True)
+            assert clone.fitness == ind.fitness
+
+    def test_sequential_clone(self) -> None:
+        for _ in range(10):
+            ind = get_individual(50)
+            clone = ind.clone(sequential="clone")
+            assert clone.fitness == ind.fitness
+            assert str(clone.torch_model) == str(ind.torch_model)
+
+    @pytest.mark.spec
+    def test_sequential_create(self) -> None:
+        for _ in range(10):
+            ind = get_individual(50)
+            clone = ind.clone(sequential="create")
+            assert clone.fitness == ind.fitness
+            assert str(clone.torch_model) == str(ind.torch_model)
+
+            # test sequential cloning
 
 
 def test_individual(capsys: Any) -> None:
@@ -25,7 +63,7 @@ def test_individual(capsys: Any) -> None:
         if isinstance(ind, Individual):
             fitnesses.append(ind.fitness)
             descs.append(str(ind))
-            torch_descs.append(str(ind.sequential_model))
+            torch_descs.append(str(ind.torch_model))
         elif isinstance(ind, str):
             fitnesses.append(None)
             descs.append("Error")
@@ -47,13 +85,12 @@ def test_individual(capsys: Any) -> None:
             if "mat1 dim 1 must match mat2 dim 0" in str(e):
                 with capsys.disabled():
                     print(ind)
-                    print(ind.sequential_model)
+                    print(ind.torch_model)
             raise e
         try:
             with capsys.disabled():
                 print(ind)
-                print(ind.sequential_model)
-                ind.evaluate_fitness()
+                ind.evaluate_fitness(fast_dev_run=True)
                 log(ind)
         except RuntimeError as e:
             if "Output size is too small" in str(e):
@@ -68,7 +105,6 @@ def test_individual(capsys: Any) -> None:
             elif "mat1 dim 1 must match mat2 dim 0" in str(e):
                 with capsys.disabled():
                     print(ind)
-                    print(ind.sequential_model)
                     log(str(e))
                 raise e
             else:
