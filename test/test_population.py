@@ -88,8 +88,8 @@ class TestPopulation:
                 individual.fitness = np.random.uniform(0, 1)
             best = pop.select_best(n)
             assert len(best) == n
-            for i in range(len(pop) - 1):
-                assert pop[i].fitness >= pop[i + 1].fitness
+            for i in range(len(best) - 1):
+                assert best[i].fitness >= best[i + 1].fitness
             for ind in best:
                 for orig in pop:
                     if str(ind) == str(orig):
