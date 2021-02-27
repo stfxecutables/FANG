@@ -236,10 +236,11 @@ class Population(Evolver):
                 print(e, file=sys.stderr)
                 individual.fitness = -1.0
         self.fitnesses = np.asarray(
-            map(lambda individual: individual.fitness, self.individuals)  # type: ignore
+            [list(map(lambda individual: individual.fitness, self.individuals))]  # type: ignore
         )
 
     # NOTE: You must indeed modify (implement) all functions below!
+
     def clone(self, *args: Any, **kwargs: Any) -> Population:
         """Copies each individual and returns a new population. """
         raise NotImplementedError()
@@ -277,7 +278,39 @@ class Population(Evolver):
             A List of the Individuals (references, not clones) with the best fitnesses.
 
         """
+        print("Self INDIVIDUALS")
+        # print(self.individuals)
+        self.evaluate_fitnesses()
+        print("Inside function")
+        print(self.fitnesses)
+        population_N = []
+        ind_sort = np.argsort(self.fitnesses, axis=None)[::-1]
+        print("IND SORT")
+        print(ind_sort)
+        self.fitnesses = np.take_along_axis(self.fitnesses, ind_sort, axis=None)
+        population_N = np.asarray(self.individuals)[ind_sort]
+
+        # fitness = self.fitnesses
+
+        print("Results")
+        print(self.fitnesses)
+
+        # fitnesses_N = fitnesses_N[:n]
+        # print(fitnesses_N)
+
+        print(population_N)
+        return population_N[:n]
+
         raise NotImplementedError()
+
+        # n = 3
+        # for i in range(len(self.fitnesses)):
+        #     population.append("Model {}".format(i))
+
+        # def selection_unique(self, population_N, num):
+        #     parents = random.sample(population_N, num)
+        #     # return np.unique(parents, axis=None)
+        #     return parents
 
     def get_crossover_pairs(
         self, n_pairs: int, method: PairingMethod
@@ -341,4 +374,3 @@ class Population(Evolver):
             output_shape=self.output_shape,
             sequential=self.is_sequential,
         )
-
