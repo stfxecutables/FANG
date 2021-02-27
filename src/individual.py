@@ -211,10 +211,11 @@ class Individual:
         return str(self) == str(o)
 
     def evaluate_fitness(self, fast_dev_run: bool = False) -> None:
-        results = train_sequential(self.torch_model, self.optimizer, fast_dev_run)
-        # Results is a dict with keys:
-        # {'test_acc', 'test_loss', 'val_acc', 'val_loss'}
-        self.fitness = results["test_acc"]
+        if self.fitness is None:
+            results = train_sequential(self.torch_model, self.optimizer, fast_dev_run)
+            # Results is a dict with keys:
+            # {'test_acc', 'test_loss', 'val_acc', 'val_loss'}
+            self.fitness = results["test_acc"]
 
     def create_random_nodes(self) -> List[Layer]:
         """Select random layer interfaces from implemented interfaces, create actual instances of
