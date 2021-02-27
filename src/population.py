@@ -235,8 +235,8 @@ class Population(Evolver):
             except Exception as e:
                 print(e, file=sys.stderr)
                 individual.fitness = -1.0
-        self.fitnesses = np.asarray(
-            [list(map(lambda individual: individual.fitness, self.individuals))]  # type: ignore
+        self.fitnesses = np.array(
+            list(map(lambda individual: individual.fitness, self.individuals))  # type: ignore
         )
 
     # NOTE: You must indeed modify (implement) all functions below!
