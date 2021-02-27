@@ -84,6 +84,8 @@ class TestPopulation:
     def test_select_best(self) -> None:
         for n in range(10):
             pop = get_pop(10)
+            for individual in pop:
+                individual.fitness = np.random.uniform(0, 1)
             best = pop.select_best(n)
             assert len(best) == n
             for i in range(len(pop) - 1):
