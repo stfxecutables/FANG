@@ -86,6 +86,7 @@ class TestPopulation:
             pop = get_pop(10)
             for individual in pop:
                 individual.fitness = np.random.uniform(0, 1)
+            pop.fitnesses = list(map(lambda ind: ind.fitness, pop))
             best = pop.select_best(n)
             assert len(best) == n
             for i in range(len(best) - 1):
