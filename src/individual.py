@@ -175,6 +175,7 @@ class Individual:
 
         self.layers: List[Layer] = self.create_random_nodes()
         self.output_layer: Layer = self.create_output_layer(self.layers)
+        self.input_output_fixes: List[Layer] = self.fix_input_output()
         self.torch_model: IndividualModel = self.realize_model()
         self.optimizer: TorchOptimizer = np.random.choice(TORCH_OPTIMIZERS)()
 
@@ -243,6 +244,27 @@ class Individual:
             if realized_layers[i] is None:
                 raise RuntimeError(f"Invalid `None` in realized_layers[{i}]: {realized_layers}")
         return realized_layers
+
+    def fix_input_output(self) -> List[Layer]:
+        # input_output_layerfix: List[Layer] = []
+        # # + 1 for input node
+        # layers: List[Type[Layer]] = np.random.choice(
+        #     TORCH_NODES_2D, size=self.n_nodes + 1, replace=True
+        # )
+        # prev: Layer = layers[0]
+
+        # # loop over the random selection of layers and make sure input and output shapes align
+        # for i, layer in enumerate(layers):
+        #     # Special handling of input layer. This is in fact the most important step
+        #     node = layer(input_shape=self.input_shape if i == 0 else prev.output_shape)
+        #     for size in node.output_shape[1:]:
+        #         if size <= 0:
+        #             raise VanishingError("Convolutional layers have reduced output to zero size.")
+        #     # node.create()
+        #     prev = node
+        #     input_output_layerfix.append(node)
+        # """ Fix the input and o/p size of the layers before mutation"""
+        raise NotImplementedError("Try to fix your i/p & o/p sizes before mutation")
 
     def create_output_layer(self, layers: List[Layer]) -> ClassificationOutput:
         if self.task == "classification":
@@ -370,7 +392,32 @@ class Individual:
         mutated: Individual
             The mutated individual
         """
-        raise NotImplementedError()
+
+        # get length of layers to get a random insertion point range
+        n_layers = len(self.layers)
+        insertion_point = np.random.randint(low=1, high=n_layers)
+        mutated = self.clone(clone_fitness=False, sequential=None)
+
+        #get new random layer
+        new_random_layer = np.random.choice(
+            TORCH_NODES_2D, size=1
+        )
+        
+        # get insertion point's previous index and its corresponding layer and its output shape
+
+        # get the insertion point's next value and its corresponding layer and its input shape
+
+        # check the generated random layer and match input and output sizes
+            # if activation layer then take the i/p of previous layer and give the o/p
+            # elif conv2d layer take the i/p and to match the o/p with the next i/p include padding (evaluate using formulas) 
+            # elif batch norm -same
+            # else throw error saying i/p and o/p sizes donot match
+
+
+        inserted_new_mutate = mutated.insert_layer(layer=new_layer, insertion_point=insertion_point)
+
+        # raise NotImplementedError()
+        return inserted_new_mutate
 
     def mutate_delete_layer(self, prob: float = 0.1) -> Individual:
         """Delete a middle layer with probability `prob`, fixing input/output sizes of the layers
@@ -387,7 +434,13 @@ class Individual:
         mutated: Individual
             The mutated individual
         """
-        raise NotImplementedError()
+        deletion_point = np.random.randint(low=1, high=len(self.layers))
+        mutated = self.clone(clone_fitness=False, sequential=None)
+        x = mutated.layers.pop(deletion_point)
+        # mutated = mutated.layers
+        # del mutated[deletion_point]
+        # mutated.layers = mutated
+        return mutated
 
     def mutate_swap_layer(self, prob: float = 0.1) -> Individual:
         """Swap the positions of  a middle layer with probability `prob`, fixing input/output sizes
@@ -403,5 +456,12 @@ class Individual:
         mutated: Individual
             The mutated individual
         """
-        raise NotImplementedError()
+        # pick random layers and swap them
+        mutated = self.clone(clone_fitness=False, sequential=None)
+        x = mutated.swap_layers()
+        return mutated
 
+    def swap_layers(self, layers):
+        random_swap_layers = np.random.choice(len(self.layers),2)
+        random_swap_layers[0], random_swap_layers[1] = random_swap_layers[1], random_swap_layers[0]
+        return random_swap_layers

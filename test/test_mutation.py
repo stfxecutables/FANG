@@ -37,6 +37,7 @@ class TestMutation:
     def test_delete(self) -> None:
         for _ in range(10):
             ind = get_individual(50)
+            # input_output_fix = fix_input_output()
             mutated = ind.mutate(
                 prob=0.99, method="random", add_layers=False, swap_layers=False, delete_layers=True
             )
@@ -50,4 +51,3 @@ class TestMutation:
                 ind = get_individual(50)
                 mutated = ind.mutate(prob=0.5, method="random", **args)
                 assert ind != mutated
-
