@@ -285,7 +285,7 @@ class Population(Evolver):
             raise ValueError("Not enough individuals.")
 
         idx_sort = np.argsort(self.fitnesses, axis=None)[::-1]
-        individuals_best = np.asarray(self.individuals)[idx_sort]
+        individuals_best = np.array(self.individuals)[idx_sort]
 
         return individuals_best[:n]
 
