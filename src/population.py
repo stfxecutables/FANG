@@ -278,39 +278,18 @@ class Population(Evolver):
             A List of the Individuals (references, not clones) with the best fitnesses.
 
         """
-        print("Self INDIVIDUALS")
-        # print(self.individuals)
-        self.evaluate_fitnesses()
-        print("Inside function")
-        print(self.fitnesses)
-        population_N = []
-        ind_sort = np.argsort(self.fitnesses, axis=None)[::-1]
-        print("IND SORT")
-        print(ind_sort)
-        self.fitnesses = np.take_along_axis(self.fitnesses, ind_sort, axis=None)
-        population_N = np.asarray(self.individuals)[ind_sort]
 
-        # fitness = self.fitnesses
+        if n > len(self.fitnesses):
+            raise ValueError(f"Only {len(self.fitnesses)} individuals to choose from.")
+        if len(self.fitnesses) == 0:
+            raise ValueError("Not enough individuals.")
 
-        print("Results")
-        print(self.fitnesses)
+        idx_sort = np.argsort(self.fitnesses, axis=None)[::-1]
+        individuals_best = np.asarray(self.individuals)[idx_sort]
 
-        # fitnesses_N = fitnesses_N[:n]
-        # print(fitnesses_N)
-
-        print(population_N)
-        return population_N[:n]
+        return individuals_best[:n]
 
         raise NotImplementedError()
-
-        # n = 3
-        # for i in range(len(self.fitnesses)):
-        #     population.append("Model {}".format(i))
-
-        # def selection_unique(self, population_N, num):
-        #     parents = random.sample(population_N, num)
-        #     # return np.unique(parents, axis=None)
-        #     return parents
 
     def get_crossover_pairs(
         self, n_pairs: int, method: PairingMethod
