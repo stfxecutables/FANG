@@ -54,6 +54,16 @@ class HallOfFame:
         survivors: List[Individual]
             List of individuals that have survived selection.
         """
+
+        # print(survivors)
+        fitness = self.fitnesses()
+        print(self.fitnesses)
+        self.hall += np.array(survivors.select_best(self.size))
+        idx_sort = sorted(range(len(fitness)), key=lambda k: fitness[k])
+        print(idx_sort)
+        self.hall = self.hall[idx_sort][: self.size]
+        return None
+
         raise NotImplementedError()
 
     def save(self, directory: Path) -> None:
