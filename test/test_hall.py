@@ -20,7 +20,6 @@ class TestHallOfFame:
         for i, ind in enumerate(start):
             ind.fitness = start_fits[i]
         start.fitnesses = list(map(lambda ind: ind.fitness, start))
-        starts = [(i, ind) for i, ind in enumerate(start)]
         start_bests = sorted(start, key=lambda ind: ind.fitness, reverse=True)[:10]
         start_best_fitnesses = list(map(lambda ind: ind.fitness, start_bests))
 
