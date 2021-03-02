@@ -414,9 +414,7 @@ class Individual:
             # else throw error saying i/p and o/p sizes donot match
 
 
-        inserted_new_mutate = mutated.insert_layer(layer=new_layer, insertion_point=insertion_point)
-
-        # raise NotImplementedError()
+        inserted_new_mutate = mutated.layers.insert(layer=new_random_layer, insertion_point=insertion_point)
         return inserted_new_mutate
 
     def mutate_delete_layer(self, prob: float = 0.1) -> Individual:
@@ -437,9 +435,6 @@ class Individual:
         deletion_point = np.random.randint(low=1, high=len(self.layers))
         mutated = self.clone(clone_fitness=False, sequential=None)
         x = mutated.layers.pop(deletion_point)
-        # mutated = mutated.layers
-        # del mutated[deletion_point]
-        # mutated.layers = mutated
         return mutated
 
     def mutate_swap_layer(self, prob: float = 0.1) -> Individual:
@@ -457,11 +452,8 @@ class Individual:
             The mutated individual
         """
         # pick random layers and swap them
+        random_swap_layers = np.random.choice(1,len(self.layers)-1,2)
         mutated = self.clone(clone_fitness=False, sequential=None)
-        x = mutated.swap_layers()
-        return mutated
-
-    def swap_layers(self, layers):
-        random_swap_layers = np.random.choice(len(self.layers),2)
         random_swap_layers[0], random_swap_layers[1] = random_swap_layers[1], random_swap_layers[0]
-        return random_swap_layers
+        x = mutated.layers.insert(layer=random_swap_layers)
+        return mutated
