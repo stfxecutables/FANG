@@ -56,12 +56,7 @@ class HallOfFame:
         """
 
         fitness1 = []
-        # print("Fitness1")
-        # print(fitness1)
         survivors.evaluate_fitnesses()
-        fitness2 = survivors.fitnesses.tolist()
-        # print("Fitness2")
-        # print(fitness2)
 
         best_survivors = list(survivors.select_best(self.size))
 
@@ -79,8 +74,9 @@ class HallOfFame:
 
             fitness1 = [fitness1[i] for i in idx_sort][: self.size]
             self.hall = [self.hall[i] for i in idx_sort][: self.size]
+            print(fitness1)
 
-         return None
+        return None
 
         raise NotImplementedError()
 
