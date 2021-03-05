@@ -55,34 +55,32 @@ class HallOfFame:
             List of individuals that have survived selection.
         """
 
-        fitness1 = self.fitnesses()
-
-        print(fitness1)
+        fitness1 = []
+        # print("Fitness1")
+        # print(fitness1)
         survivors.evaluate_fitnesses()
-        fitness2 = sorted(survivors.fitnesses.tolist(), reverse=True)
-        print(fitness2)
+        fitness2 = survivors.fitnesses.tolist()
+        # print("Fitness2")
+        # print(fitness2)
+
         best_survivors = list(survivors.select_best(self.size))
 
         if len(self.hall) == 0:
-            self.hall = best_survivors
-            # fitness2 = fitness2[: self.size]
+            self.hall = best_survivors[: self.size]
+
         else:
-            fitness2.extend(fitness1)
-            print("Fitness2 Again")
-            print(fitness2)
-
             self.hall.extend(best_survivors)
-            idx_sort = sorted(range(len(fitness2)), key=lambda k: fitness2[: k - 1])[:-1]
-            print("IDX SORT")
-            print(idx_sort)
-            fitness2 = [fitness2[i] for i in idx_sort][: self.size]
-            self.hall = [self.hall[i] for i in idx_sort][: self.size]
-        fitness2 = survivors.fitnesses.tolist()
-        print(fitness2)
-        for i, ind in enumerate(self.hall):
-            ind.fitness = fitness2[i]
+            for i, ind in enumerate(self.hall):
+                fitness1.append(ind.fitness)
 
-        return None
+            # zip_sort = sorted(zip(fitness1, self.hall), reverse=True)
+            # fitness1, self.hall = zip(*zip_sort)
+            idx_sort = sorted(range(len(fitness1)), key=lambda k: fitness1[k], reverse=True)
+
+            fitness1 = [fitness1[i] for i in idx_sort][: self.size]
+            self.hall = [self.hall[i] for i in idx_sort][: self.size]
+
+         return None
 
         raise NotImplementedError()
 
