@@ -258,7 +258,6 @@ class Population(Evolver):
         population: Population
             A new `Population` object of of the same length, but with each individual mutated with
             probability `probability`.
-
         """
         raise NotImplementedError()
 

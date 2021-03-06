@@ -175,7 +175,7 @@ class Individual:
 
         self.layers: List[Layer] = self.create_random_nodes()
         self.output_layer: Layer = self.create_output_layer(self.layers)
-        self.input_output_fixes: List[Layer] = self.fix_input_output()
+        # self.input_output_fixes: List[Layer] = self.fix_input_output()
         self.torch_model: IndividualModel = self.realize_model()
         self.optimizer: TorchOptimizer = np.random.choice(TORCH_OPTIMIZERS)()
 
@@ -403,14 +403,14 @@ class Individual:
         new_random_layer = np.random.choice(
             TORCH_NODES_2D, size=1
         )
-        
+
         # get insertion point's previous index and its corresponding layer and its output shape
 
         # get the insertion point's next value and its corresponding layer and its input shape
 
         # check the generated random layer and match input and output sizes
             # if activation layer then take the i/p of previous layer and give the o/p
-            # elif conv2d layer take the i/p and to match the o/p with the next i/p include padding (evaluate using formulas) 
+            # elif conv2d layer take the i/p and to match the o/p with the next i/p include padding (evaluate using formulas)
             # elif batch norm -same
             # else throw error saying i/p and o/p sizes donot match
 
