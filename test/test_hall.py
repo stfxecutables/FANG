@@ -19,7 +19,7 @@ class TestHallOfFame:
         start_fits = np.random.uniform(0, 1, 11)
         for i, ind in enumerate(start):
             ind.fitness = start_fits[i]
-        starts = [(i, ind) for i, ind in enumerate(start)]
+        start.fitnesses = list(map(lambda ind: ind.fitness, start))
         start_bests = sorted(start, key=lambda ind: ind.fitness, reverse=True)[:10]
         start_best_fitnesses = list(map(lambda ind: ind.fitness, start_bests))
 
@@ -33,9 +33,10 @@ class TestHallOfFame:
 
         # test a real update
         survivors = get_pop(10, attempts=50)
-        survive_fits = np.random.uniform(0, 1, 10)
+        survive_fits = np.random.uniform(0, 1, 10).tolist()
         for i, ind in enumerate(survivors):
             ind.fitness = survive_fits[i]
+        survivors.fitnesses = list(map(lambda ind: ind.fitness, survivors))
         hall.update(survivors)
 
         assert len(hall) == 10
