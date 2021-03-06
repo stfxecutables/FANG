@@ -55,9 +55,9 @@ class HallOfFame:
             List of individuals that have survived selection.
         """
 
-        fitness1 = []
-        survivors.evaluate_fitnesses()
+        fitness_best = []
 
+        survivors.evaluate_fitnesses()
         best_survivors = list(survivors.select_best(self.size))
 
         if len(self.hall) == 0:
@@ -66,15 +66,12 @@ class HallOfFame:
         else:
             self.hall.extend(best_survivors)
             for i, ind in enumerate(self.hall):
-                fitness1.append(ind.fitness)
+                fitness_best.append(ind.fitness)
 
-            # zip_sort = sorted(zip(fitness1, self.hall), reverse=True)
-            # fitness1, self.hall = zip(*zip_sort)
-            idx_sort = sorted(range(len(fitness1)), key=lambda k: fitness1[k], reverse=True)
+            idx_sort = sorted(range(len(fitness_best)), key=lambda k: fitness_best[k], reverse=True)
 
-            fitness1 = [fitness1[i] for i in idx_sort][: self.size]
+            fitness_best = [fitness_best[i] for i in idx_sort][: self.size]
             self.hall = [self.hall[i] for i in idx_sort][: self.size]
-            print(fitness1)
 
         return None
 
