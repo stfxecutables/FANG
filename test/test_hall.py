@@ -33,9 +33,10 @@ class TestHallOfFame:
 
         # test a real update
         survivors = get_pop(10, attempts=50)
-        survive_fits = np.random.uniform(0, 1, 10)
+        survive_fits = np.random.uniform(0, 1, 10).tolist()
         for i, ind in enumerate(survivors):
             ind.fitness = survive_fits[i]
+        survivors.fitnesses = list(map(lambda ind: ind.fitness, survivors))
         hall.update(survivors)
 
         assert len(hall) == 10
