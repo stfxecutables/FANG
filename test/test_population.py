@@ -42,18 +42,18 @@ class TestPopulation:
 
     def test_clone(self) -> None:
         pop = get_pop(10)
-        clone = pop.clone()
+        clone = pop.clone(clone_fitness=True, sequential="create")
         assert isinstance(clone, Population)
         assert len(pop) == len(clone)
-        for i in range(len(pop)):
+        for orig, cloned in zip(pop, clone):
             # NOT A GOOD TEST LONG TERM...
             # TODO: implement __eq__ for all core classes
-            assert isinstance(clone[i], Individual)
-            assert str(clone[i]) == str(pop[i])
-            assert clone[i].fitness == pop[i].fitness
+            assert isinstance(cloned, Individual)
+            assert str(cloned) == str(orig)
+            assert cloned.fitness == orig.fitness
             try:
-                assert clone[i].fitness is not pop[i].fitness
-                assert clone[i] is not pop[i]
+                assert cloned.fitness is not orig.fitness
+                assert cloned is not orig
             except AssertionError as e:
                 raise RuntimeError(
                     "When copying objects, you need to make sure you actually copy, e.g. using "
