@@ -3,6 +3,7 @@ from os import replace
 import sys
 from src.crossover import cross_individuals
 from src.individual import Individual, Task
+from src.interface.arguments import ArgMutation
 from src.interface.evolver import Evolver
 from src.interface.initializer import Framework
 from src.exceptions import VanishingError
@@ -245,7 +246,15 @@ class Population(Evolver):
         """Copies each individual and returns a new population. """
         raise NotImplementedError()
 
-    def mutate(self, probability: float, *args: Any, **kwargs: Any) -> Population:
+    def mutate(
+        self,
+        prob: float,
+        method: ArgMutation = "random",
+        add_layers: bool = False,
+        swap_layers: bool = False,
+        delete_layers: bool = False,
+        optimizer: bool = False,
+    ) -> Population:
         """Calls the `.mutate` method of each individual with relevant arguments passed in here, and
         returns a new population of those mutated individuals.
 
@@ -261,7 +270,16 @@ class Population(Evolver):
             probability `probability`.
 
         """
-        raise NotImplementedError()
+        args = dict(
+            prob=prob,
+            method=method,
+            add_layers=add_layers,
+            swap_layers=swap_layers,
+            delete_layers=delete_layers,
+            optimizer=optimizer,
+        )
+        mutateds = [ind.mutate(**args) for ind in self]
+        return Population(mutateds)
 
     def select_best(self, n: int) -> List[Individual]:
         """Gets the fitnesses of each individual and selects the top n individuals by fitness, in
