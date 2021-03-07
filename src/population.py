@@ -240,6 +240,7 @@ class Population(Evolver):
         )
 
     # NOTE: You must indeed modify (implement) all functions below!
+
     def clone(self, *args: Any, **kwargs: Any) -> Population:
         """Copies each individual and returns a new population. """
         raise NotImplementedError()
@@ -258,6 +259,7 @@ class Population(Evolver):
         population: Population
             A new `Population` object of of the same length, but with each individual mutated with
             probability `probability`.
+
         """
         raise NotImplementedError()
 
@@ -276,6 +278,17 @@ class Population(Evolver):
             A List of the Individuals (references, not clones) with the best fitnesses.
 
         """
+
+        if n > len(self.fitnesses):
+            raise ValueError(f"Only {len(self.fitnesses)} individuals to choose from.")
+        if len(self.fitnesses) == 0:
+            raise ValueError("Not enough individuals.")
+
+        idx_sort = np.argsort(self.fitnesses, axis=None)[::-1]
+        individuals_best = np.array(self.individuals)[idx_sort]
+
+        return individuals_best[:n]
+
         raise NotImplementedError()
 
     def get_crossover_pairs(
@@ -340,4 +353,3 @@ class Population(Evolver):
             output_shape=self.output_shape,
             sequential=self.is_sequential,
         )
-
