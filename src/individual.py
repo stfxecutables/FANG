@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Tuple, Union, no_type_check, Type
 from copy import deepcopy
 
 import numpy as np
+import sys
 import torch
 from torch import Tensor as TorchTensor
 from torch.nn import Module as TorchModule
@@ -307,13 +308,11 @@ class Individual:
         self, clone_fitness: bool = True, sequential: Literal["clone", "create"] = None
     ) -> Individual:
         clone: Individual = self.__class__.__new__(self.__class__)
-        clone.n_nodes = self.n_nodes
-        clone.task = self.task
-        clone.input_shape = self.input_shape
-        clone.output_shape = self.output_shape
-        clone.is_sequential = self.is_sequential
-        clone.activation_interval = self.activation_interval
-        clone.framework = self.framework
+        for prop, value in self.__dict__.items():
+            if prop in ["layers", "output_layer", "torch_model", "fitness"]:
+                setattr(clone, prop, None)
+            else:
+                setattr(clone, prop, value)
 
         clone.layers = [layer.clone() for layer in self.layers]
         for layer in clone.layers:
@@ -330,7 +329,21 @@ class Individual:
             raise ValueError("Valid options for `sequential` are 'clone', 'create' or `None`.")
 
         clone.optimizer = self.optimizer.clone()
-        clone.fitness = self.fitness if clone_fitness else None
+        # unfortunately, python deepcopy is shit and does not work, because if you write e.g.
+        #
+        #                   x = 1.0; y = deepcopy(x)
+        #                   print(x is y)
+        #
+        # you see "True". This is trash behaviour, and in general the behaviour of `deepcopy` is not
+        # what anyone really wants. Even:
+        #
+        #                   x = 1.0; y = float(x)
+        #                   print(x is y)
+        #
+        # stll result in a `True`. Instead, I have resorted floating-point trickery
+        eps = sys.float_info.epsilon
+        f = float(self.fitness) + eps - eps
+        clone.fitness = f if clone_fitness else None
         return clone
 
     def mutate(
@@ -399,23 +412,22 @@ class Individual:
         insertion_point = np.random.randint(low=1, high=n_layers)
         mutated = self.clone(clone_fitness=False, sequential=None)
 
-        #get new random layer
-        new_random_layer = np.random.choice(
-            TORCH_NODES_2D, size=1
-        )
+        # get new random layer
+        new_random_layer = np.random.choice(TORCH_NODES_2D, size=1)
 
         # get insertion point's previous index and its corresponding layer and its output shape
 
         # get the insertion point's next value and its corresponding layer and its input shape
 
         # check the generated random layer and match input and output sizes
-            # if activation layer then take the i/p of previous layer and give the o/p
-            # elif conv2d layer take the i/p and to match the o/p with the next i/p include padding (evaluate using formulas)
-            # elif batch norm -same
-            # else throw error saying i/p and o/p sizes donot match
+        # if activation layer then take the i/p of previous layer and give the o/p
+        # elif conv2d layer take the i/p and to match the o/p with the next i/p include padding (evaluate using formulas)
+        # elif batch norm -same
+        # else throw error saying i/p and o/p sizes donot match
 
-
-        inserted_new_mutate = mutated.layers.insert(layer=new_random_layer, insertion_point=insertion_point)
+        inserted_new_mutate = mutated.layers.insert(
+            layer=new_random_layer, insertion_point=insertion_point
+        )
         return inserted_new_mutate
 
     def mutate_delete_layer(self, prob: float = 0.1) -> Individual:
@@ -453,7 +465,7 @@ class Individual:
             The mutated individual
         """
         # pick random layers and swap them
-        random_swap_layers = np.random.choice(1,len(self.layers)-1,2)
+        random_swap_layers = np.random.choice(1, len(self.layers) - 1, 2)
         mutated = self.clone(clone_fitness=False, sequential=None)
         random_swap_layers[0], random_swap_layers[1] = random_swap_layers[1], random_swap_layers[0]
         x = mutated.layers.insert(layer=random_swap_layers)

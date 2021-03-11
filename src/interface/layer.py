@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
@@ -81,6 +82,9 @@ class Layer(Evolver, PyTorch):
     def clone(self) -> Layer:
         cloned = self.__class__(self.input_shape)
         cloned.args = self.args.clone()
+        output_shape = getattr(self, "output_shape", None)
+        if output_shape is not None:
+            cloned.output_shape = output_shape
         return cloned
 
     def mutate(

@@ -1,6 +1,8 @@
 from __future__ import annotations
+from copy import deepcopy
 from os import replace
 import sys
+
 from src.crossover import cross_individuals
 from src.individual import Individual, Task
 from src.interface.arguments import ArgMutation
@@ -242,9 +244,16 @@ class Population(Evolver):
 
     # NOTE: You must indeed modify (implement) all functions below!
 
-    def clone(self, *args: Any, **kwargs: Any) -> Population:
+    def clone(
+        self, clone_fitness: bool = True, sequential: Literal["clone", "create"] = None
+    ) -> Population:
         """Copies each individual and returns a new population. """
-        raise NotImplementedError()
+        args = dict(clone_fitness=clone_fitness, sequential=sequential)
+        clones = [ind.clone(**args) for ind in self]
+        pop = Population(clones)
+        if clone_fitness:
+            pop.fitnesses = deepcopy(self.fitnesses)
+        return pop
 
     def mutate(
         self,

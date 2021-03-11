@@ -4,6 +4,7 @@ from copy import deepcopy
 from typing import Any, Dict, Optional, Tuple, Union, cast
 
 import numpy as np
+from typing import List
 from typing_extensions import Literal
 
 from src.interface.evolver import Evolver
@@ -187,6 +188,34 @@ class Arguments(Evolver):
             self.arg_definitions[argname] = ArgDef(argname, kind, domain)
             self.arg_values[argname] = None
         self._randomize_argvals()
+
+    def __str__(self) -> str:
+        arg_info: List[str] = []
+        for argname, val in self.arg_values.items():
+            if argname == "in_channels":
+                continue
+            domain = self.arg_definitions[argname].domain
+            kind = self.arg_definitions[argname].kind
+            if kind == "enum":
+                domain = str(domain).replace("(", "{").replace(")", "}")
+            elif kind == "float":
+                val = "{:1.2e}".format(val)  # type: ignore
+                domain = str(domain).replace("(", "[")
+            elif kind == "int":
+                domain = str(domain).replace("(", "[")
+            elif kind == "bool":
+                val = "True" if val else "False"
+                domain = str(domain).replace("(", "{").replace(")", "}")
+            # info.append(f"   {argname:<15}: {val:<10} in {domain}")
+            arg_info.append(f"{argname}={val} in {domain}")
+        arg_info = ", ".join(arg_info)
+        arg_info = f"({arg_info})" if arg_info != "" else ""
+        # io_info = f"{self.input_shape} -> {self.output_shape}"
+        # info = f"{arg_info}\r\n   {io_info}"
+        info = f"{arg_info}\r\n"
+        return info
+
+    __repr__ = __str__
 
     def clone(self) -> Arguments:
         """Get an identical but independent copy of the Arguments"""
