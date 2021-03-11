@@ -344,7 +344,7 @@ class Generation:
     def get_survivors(self) -> None:
         assert self.state == State.EVALUATED
         self.survivors = self.filter_by_fitness()
-        if len(self.survivors < 2):
+        if len(self.survivors) < 2:
             if self.attempts < self.attempts_per_generation:
                 print("Not enough surviving individuals to reproduce. Creating new progenitors...")
                 self.state = State.INITIALIZED
@@ -358,6 +358,7 @@ class Generation:
                     activation_interval=self.activation_interval,
                     framework=self.framework,
                     attempts_per_individual=self.attempts_per_individual,
+                    fast_dev_run=self.fast_dev_run,
                 )
                 self.attempts += 1
                 self.evaluate_fitnesses()
