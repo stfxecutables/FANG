@@ -17,7 +17,7 @@ def train_sequential(
     lightning_model = LightningSequential(model, optimizer)
     if fast_dev_run:
         trainer = pl.Trainer(
-            gpus=int(t.cuda.is_available()), max_epochs=1, check_val_every_n_epoch=2, max_steps=2
+            gpus=int(t.cuda.is_available()), max_epochs=1, check_val_every_n_epoch=2, max_steps=1
         )
     else:
         trainer = pl.Trainer(

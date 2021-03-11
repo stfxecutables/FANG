@@ -42,6 +42,7 @@ class MNISTDataModule(pl.LightningDataModule):
         mnist_train, mnist_val = random_split(mnist_train, [55000, 5000], gen)
         if self.fast_dev_run:
             mnist_train, _ = random_split(mnist_train, [5000, 50000], gen)
+            mnist_test, _ = random_split(mnist_test, [10, len(mnist_test) - 10], gen)
 
         # assign to use in dataloaders
         self.train_dataset = mnist_train
