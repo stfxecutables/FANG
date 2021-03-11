@@ -162,7 +162,6 @@ class TestPopulationTests:
             # NOT A GOOD TEST LONG TERM...
             # TODO: implement __eq__ for all core classes
             assert str(mutated[i]) != str(pop[i])
-            assert mutated[i].fitness is None
             try:
                 assert mutated[i] is not pop[i]
             except AssertionError as e:

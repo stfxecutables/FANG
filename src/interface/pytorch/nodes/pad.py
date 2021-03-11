@@ -41,7 +41,7 @@ class Padding(ReshapingLayer):
         C_out = self.out_channels
         H_out = int(H + 2 * P)
         W_out = int(W + 2 * P)
-        return (C_out, H_out, W_out)
+        return C_out, H_out, W_out
 
 
 class ZeroPadding(Padding, PyTorch):

@@ -228,7 +228,7 @@ class Individual:
         # + 1 for input node
         layers: List[Type[Layer]] = np.random.choice(
             TORCH_NODES_2D, size=self.n_nodes + 1, replace=True
-        )
+        ).tolist()
         prev: Layer = layers[0]
 
         # loop over the random selection of layers and make sure input and output shapes align
@@ -291,6 +291,8 @@ class Individual:
         into a torch Module"""
         # create torch instances
         for layer in self.layers:
+            if not isinstance(layer, Layer):
+                raise ValueError(f"Someone fucked up. {layer} is not a Layer.")
             layer.create()
         self.output_layer.create()
 
@@ -341,9 +343,10 @@ class Individual:
         #                   print(x is y)
         #
         # stll result in a `True`. Instead, I have resorted floating-point trickery
-        eps = sys.float_info.epsilon
-        f = float(self.fitness) + eps - eps
-        clone.fitness = f if clone_fitness else None
+        if self.fitness is not None:
+            eps = sys.float_info.epsilon
+            f = float(self.fitness) + eps - eps
+            clone.fitness = f if clone_fitness else None
         return clone
 
     def mutate(
@@ -409,26 +412,14 @@ class Individual:
 
         # get length of layers to get a random insertion point range
         n_layers = len(self.layers)
-        insertion_point = np.random.randint(low=1, high=n_layers)
+        position = np.random.randint(low=1, high=n_layers)
+        prev = self.layers[position - 1]
         mutated = self.clone(clone_fitness=False, sequential=None)
-
-        # get new random layer
-        new_random_layer = np.random.choice(TORCH_NODES_2D, size=1)
-
-        # get insertion point's previous index and its corresponding layer and its output shape
-
-        # get the insertion point's next value and its corresponding layer and its input shape
-
-        # check the generated random layer and match input and output sizes
-        # if activation layer then take the i/p of previous layer and give the o/p
-        # elif conv2d layer take the i/p and to match the o/p with the next i/p include padding (evaluate using formulas)
-        # elif batch norm -same
-        # else throw error saying i/p and o/p sizes donot match
-
-        inserted_new_mutate = mutated.layers.insert(
-            layer=new_random_layer, insertion_point=insertion_point
-        )
-        return inserted_new_mutate
+        layer_constructor: Layer = np.random.choice(TORCH_NODES_2D, size=1)[0]
+        layer = layer_constructor(input_shape=prev.output_shape)
+        # next layer may now be in an inconsistent state, must be fixed later!
+        mutated.layers.insert(position, layer)
+        return mutated
 
     def mutate_delete_layer(self, prob: float = 0.1) -> Individual:
         """Delete a middle layer with probability `prob`, fixing input/output sizes of the layers
@@ -447,7 +438,7 @@ class Individual:
         """
         deletion_point = np.random.randint(low=1, high=len(self.layers))
         mutated = self.clone(clone_fitness=False, sequential=None)
-        x = mutated.layers.pop(deletion_point)
+        mutated.layers.pop(deletion_point)
         return mutated
 
     def mutate_swap_layer(self, prob: float = 0.1) -> Individual:
@@ -464,9 +455,8 @@ class Individual:
         mutated: Individual
             The mutated individual
         """
-        # pick random layers and swap them
-        random_swap_layers = np.random.choice(1, len(self.layers) - 1, 2)
+        # pick random layers (except for first/input layer) and swap them
+        idx1, idx2 = np.random.choice(range(1, len(self.layers)), 2).tolist()
         mutated = self.clone(clone_fitness=False, sequential=None)
-        random_swap_layers[0], random_swap_layers[1] = random_swap_layers[1], random_swap_layers[0]
-        x = mutated.layers.insert(layer=random_swap_layers)
+        mutated.layers[idx1], mutated.layers[idx2] = mutated.layers[idx2], mutated.layers[idx1]
         return mutated
