@@ -420,4 +420,7 @@ class Generation:
     def filter_by_fitness(self) -> Population:
         """Get a population of individuals from self.progenitors that all have fitness above
         `self.survival_threshold`. Must return *references*, and not copies."""
-        raise NotImplementedError()
+        survivors = list(
+            filter(lambda ind: ind.fitness >= self.survival_threshold, self.progenitors)
+        )
+        return Population(survivors)

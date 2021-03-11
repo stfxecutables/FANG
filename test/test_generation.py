@@ -31,19 +31,22 @@ class TestGeneration:
 
     def test_evaluate_fitnesses(self, capsys: Any) -> None:
         gen = get_gen(2)
-        with capsys.disabled():
-            gen.evaluate_fitnesses()
+        gen.evaluate_fitnesses()
         for ind in gen.progenitors:
             assert ind.fitness is not None
 
     def test_get_survivors(self, capsys: Any) -> None:
-        gen = get_gen(2)
-        for ind in gen.progenitors:
-            ind.fitness = np.random.uniform(0, 1)
+        gen = get_gen(10)
+        for i, ind in enumerate(gen.progenitors):
+            if i < 5:
+                ind.fitness = np.random.uniform(0.8, 1)
+            else:
+                ind.fitness = 0.0
+        gen.progenitors.fitnesses = [ind.fitness for ind in gen.progenitors]
         gen.state = State.EVALUATED
-        with capsys.disabled():
-            gen.get_survivors()
+        gen.get_survivors()
         assert gen.state == State.SURVIVED
+        assert len(gen.survivors) == 5
 
     def test_mutate_survivors(self, capsys: Any) -> None:
         gen = get_gen(2)
