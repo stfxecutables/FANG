@@ -1,5 +1,7 @@
 from src.generation import Generation
 from src.generation import State
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import pytest
 import numpy as np
 
@@ -7,7 +9,7 @@ from test.utils import get_pop
 from typing import Any
 
 
-def get_gen(size: int = 10) -> Generation:
+def get_gen(size: int = 10, fast_dev_run: bool = True) -> Generation:
     return Generation(
         size=size,
         n_nodes=10,
@@ -16,7 +18,7 @@ def get_gen(size: int = 10) -> Generation:
         output_shape=10,
         attempts_per_individual=50,
         attempts_per_generation=50,
-        fast_dev_run=True,
+        fast_dev_run=fast_dev_run,
     )
 
 
@@ -67,3 +69,11 @@ class TestGeneration:
         with capsys.disabled():
             gen.cross()
         assert gen.state == State.CROSSED
+
+
+def test_next(capsys: Any) -> None:
+    gen = get_gen(10, fast_dev_run=False)
+    tmpdir = TemporaryDirectory()
+    path = Path(tmpdir.name)
+    with capsys.disabled():
+        gen2 = gen.next(survivor_dir=path)
