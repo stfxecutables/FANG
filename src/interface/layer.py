@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa
 
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -120,7 +120,7 @@ class Layer(Evolver, PyTorch):
 
     def __str__(self) -> str:
         header = f"{self.__class__.__name__} interface"
-        arg_info = []
+        arg_infos = []
         for argname, val in self.args.arg_values.items():
             if argname == "in_channels":
                 continue
@@ -137,8 +137,8 @@ class Layer(Evolver, PyTorch):
                 val = "True" if val else "False"
                 domain = str(domain).replace("(", "{").replace(")", "}")
             # info.append(f"   {argname:<15}: {val:<10} in {domain}")
-            arg_info.append(f"{argname}={val} in {domain}")
-        arg_info = ", ".join(arg_info)
+            arg_infos.append(f"{argname}={val} in {domain}")
+        arg_info = ", ".join(arg_infos)
         arg_info = f"({arg_info})" if arg_info != "" else ""
         io_info = f"{self.input_shape} -> {self.output_shape}"
         info = f"{header}  {arg_info}\r\n   {io_info}"

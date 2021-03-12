@@ -76,4 +76,4 @@ def test_next(capsys: Any) -> None:
     tmpdir = TemporaryDirectory()
     path = Path(tmpdir.name)
     with capsys.disabled():
-        gen2 = gen.next(survivor_dir=path)
+        gen = gen.next(survivor_dir=path)

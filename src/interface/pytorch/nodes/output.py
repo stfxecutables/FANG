@@ -55,7 +55,11 @@ class GlobalAveragePooling(Module):
         return t.mean(x, dim=self._runtime_channel_dim, keepdim=True)
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}(input_shape={str(self._input_shape)}, reducing_dim={self._runtime_channel_dim})"
+        return (
+            f"{self.__class__.__name__}"
+            f"(input_shape={str(self._input_shape)}, "
+            f"reducing_dim={self._runtime_channel_dim})"
+        )
 
     __repr__ = __str__
 
@@ -232,7 +236,7 @@ class ClassificationOutput(PyTorch):
         """
         if reduction == "channels":
             pooling: Module = GlobalAveragePooling(input_shape=input_shape)
-            return pooling, pooling._output_shape
+            return pooling, pooling._output_shape  # type: ignore
         elif reduction == "pooling":
             pooling = MaxPool2d(2, 2)
             spatial = (input_shape[1], input_shape[2])
@@ -268,10 +272,10 @@ class ClassificationOutput(PyTorch):
 
     def __str__(self) -> str:
         header = f"{self.__class__.__name__} interface"
-        arg_info = []
+        arg_infos = []
         for argname, val in self.constructor_args.items():
-            arg_info.append(f"{argname}={val}")
-        arg_info = ", ".join(arg_info)
+            arg_infos.append(f"{argname}={val}")
+        arg_info = ", ".join(arg_infos)
         arg_info = f"({arg_info})" if arg_info != "" else ""
         io_info = f"{self.input_shape} -> {self.output_shape}"
         info = f"{header}  {arg_info}\r\n   {io_info}"

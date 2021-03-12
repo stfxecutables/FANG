@@ -1,30 +1,14 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa
+
 from enum import Enum
+from pathlib import Path
+from typing import Optional, Tuple, Type, Union, no_type_check
 
 from src.hall_of_fame import HallOfFame
-from src.interface.arguments import ArgMutation
-from src.interface.pytorch.optimizer import Optimizer
-from src.individual import Individual
-from src.population import Population
-from src.interface.evolver import Evolver
 from src.individual import Individual, Task
-from src.interface.evolver import Evolver
+from src.interface.arguments import ArgMutation
 from src.interface.initializer import Framework
-from src.exceptions import VanishingError
-
-from typing import Any, Dict, List, Optional, Tuple, Union, Type
-from typing import cast, no_type_check
-from typing_extensions import Literal
-
-from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sbn
-from numpy import ndarray
-from pandas import DataFrame, Series
+from src.population import Population
 
 
 class State(Enum):
@@ -275,6 +259,7 @@ class Generation:
         population.fast_dev_run = self.fast_dev_run  # ensure we override this
         return self
 
+    @no_type_check
     def __str__(self) -> str:
         info = f"Generation (stage={self.state})."
         if self.state == State.INITIALIZED:
@@ -284,7 +269,7 @@ class Generation:
         elif self.state == State.SURVIVED:
             return (
                 f"{info} {len(self.survivors)} survivors for threshold={self.survival_threshold}."
-            )  # type: ignore # noqa
+            )
         elif self.state == State.SAVED:
             return (
                 f"{info} {len(self.survivors)} survivors, {len(self.hall)} in Hall of Fame."

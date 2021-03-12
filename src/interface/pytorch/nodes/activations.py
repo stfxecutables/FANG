@@ -11,14 +11,14 @@ class Activation(Layer):
 
 class ReLU(Activation):
     def create(self) -> None:
-        if self.torch is not None:
+        if self.torch is not None:  # type: ignore
             return
         self.torch = torch.nn.ReLU()
 
 
 class Hardswish(Activation):
     def create(self) -> None:
-        if self.torch is not None:
+        if self.torch is not None:  # type: ignore
             return
         self.torch = torch.nn.Hardswish()
 

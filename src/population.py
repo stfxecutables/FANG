@@ -1,26 +1,18 @@
-from __future__ import annotations
-from copy import deepcopy
-from os import replace
+from __future__ import annotations  # noqa
+
 import sys
+from copy import deepcopy
+from typing import Dict, Iterator, List, Optional, Tuple, Union
+
+import numpy as np
+from typing_extensions import Literal
 
 from src.crossover import cross_individuals
+from src.exceptions import VanishingError
 from src.individual import Individual, Task
 from src.interface.arguments import ArgMutation
 from src.interface.evolver import Evolver
 from src.interface.initializer import Framework
-from src.exceptions import VanishingError
-from numpy import ndarray
-from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union, Iterator, Dict
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sbn
-from pandas import DataFrame, Series
-
-from typing import Any, List, Tuple
-from typing_extensions import Literal
 
 PairingMethod = Literal["random", "best", "weighted-random"]
 
@@ -122,7 +114,7 @@ class Population(Evolver):
         if isinstance(individuals, list):
             self.individuals: List[Individual] = self.__validate_individuals(individuals)
             self.fitnesses: List[Optional[float]] = list(
-                map(lambda ind: ind.fitness, self.individuals)
+                map(lambda ind: ind.fitness, self.individuals)  # type: ignore
             )
             ind = individuals[0]
             self.input_shape = ind.input_shape
@@ -177,7 +169,7 @@ class Population(Evolver):
 
     def __str__(self) -> str:
         # NOTE: YOU SHOULD NOT NEED TO MODIFY THIS FUNCTION
-        e = "evaluated" if self.fitnesses is not None else "unevaluated"
+        e = "evaluated" if self.fitnesses is not None else "unevaluated"  # type: ignore
         return f"Population of size {len(self.individuals)} (fitnesses {e})."
 
     def __copy__(self) -> str:
@@ -307,16 +299,15 @@ class Population(Evolver):
         """
 
         if n > len(self.fitnesses):
-            raise ValueError(f"Only {len(self.fitnesses)} individuals to choose from.")
+            raise RuntimeError(
+                f"Only {len(self.fitnesses)} individuals to choose from, but trying to choose {n}."
+            )
         if len(self.fitnesses) == 0:
-            raise ValueError("Not enough individuals.")
+            raise RuntimeError("Not enough individuals.")
 
-        idx_sort = np.argsort(self.fitnesses, axis=None)[::-1]
-        individuals_best = np.array(self.individuals)[idx_sort]
-
-        return individuals_best[:n]
-
-        raise NotImplementedError()
+        idx_sort = np.argsort(-np.array(self.fitnesses))
+        best = (np.array(self.individuals)[idx_sort]).tolist()
+        return best[:n]  # type: ignore
 
     def get_crossover_pairs(
         self, n_pairs: int, method: PairingMethod

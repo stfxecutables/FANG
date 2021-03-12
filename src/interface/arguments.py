@@ -190,25 +190,25 @@ class Arguments(Evolver):
         self._randomize_argvals()
 
     def __str__(self) -> str:
-        arg_info: List[str] = []
+        arg_infos: List[str] = []
         for argname, val in self.arg_values.items():
             if argname == "in_channels":
                 continue
-            domain = self.arg_definitions[argname].domain
-            kind = self.arg_definitions[argname].kind
+            domain: Domain = self.arg_definitions[argname].domain
+            kind: ArgKind = self.arg_definitions[argname].kind
             if kind == "enum":
-                domain = str(domain).replace("(", "{").replace(")", "}")
+                d = str(domain).replace("(", "{").replace(")", "}")
             elif kind == "float":
                 val = "{:1.2e}".format(val)  # type: ignore
-                domain = str(domain).replace("(", "[")
+                d = str(domain).replace("(", "[")
             elif kind == "int":
-                domain = str(domain).replace("(", "[")
+                d = str(domain).replace("(", "[")
             elif kind == "bool":
                 val = "True" if val else "False"
-                domain = str(domain).replace("(", "{").replace(")", "}")
+                d = str(domain).replace("(", "{").replace(")", "}")
             # info.append(f"   {argname:<15}: {val:<10} in {domain}")
-            arg_info.append(f"{argname}={val} in {domain}")
-        arg_info = ", ".join(arg_info)
+            arg_infos.append(f"{argname}={val} in {d}")
+        arg_info = ", ".join(arg_infos)
         arg_info = f"({arg_info})" if arg_info != "" else ""
         # io_info = f"{self.input_shape} -> {self.output_shape}"
         # info = f"{arg_info}\r\n   {io_info}"

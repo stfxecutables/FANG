@@ -1,5 +1,5 @@
 from pprint import pprint
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import pytorch_lightning as pl
 import torch as t
@@ -27,4 +27,4 @@ def train_sequential(
     results = trainer.test()[0]
     pprint(results)
     print(f"Testing Accuracy: {results['test_acc']}")
-    return results
+    return cast(Dict[str, Any], results)
