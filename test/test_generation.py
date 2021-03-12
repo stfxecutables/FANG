@@ -80,5 +80,8 @@ def test_next(capsys: Any) -> None:
         for i in range(5):
             print("{:-^80}".format(f"  Generation {i}  "))
             gen = gen.next(survivor_dir=path)
-            print("Fitnesses:")
+            gen.fast_dev_run = True
+            print("Hall of Fame Fitnesses:")
             print(np.round(gen.hall.fitnesses(), 3))
+            print("Best Hall of Fame model:")
+            print(gen.hall.best())

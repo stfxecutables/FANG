@@ -199,6 +199,10 @@ class Population(Evolver):
 
     @staticmethod
     def __validate_individuals(individuals: List[Individual]) -> List[Individual]:
+        if len(individuals) == 0:
+            raise RuntimeError("We've run out of individuals!")
+        if None in individuals:
+            raise RuntimeError("One of our individuals is `None`")
         input_shape = individuals[0].input_shape
         output_shape = individuals[0].output_shape
         task = individuals[0].task
@@ -280,8 +284,17 @@ class Population(Evolver):
             delete_layers=delete_layers,
             optimizer=optimizer,
         )
-        mutateds = [ind.mutate(**args) for ind in self]
-        return Population(mutateds)
+        mutateds = []
+        for ind in self:
+            mutated: Optional[Individual] = None
+            count = 0
+            while mutated is None and count < 100:
+                mutated = ind.mutate(**args)
+                count += 1
+            mutateds.append(mutated)
+        if None in mutateds:
+            raise VanishingError("Couldn't get a mutation to produce a valid size.")
+        return Population(mutateds, fast_dev_run=self.fast_dev_run)
 
     def select_best(self, n: int) -> List[Individual]:
         """Gets the fitnesses of each individual and selects the top n individuals by fitness, in

@@ -183,7 +183,6 @@ class Individual:
         self.framework: Framework = framework
 
         self.layers: List[Layer] = self.create_random_nodes()
-        # self.input_output_fixes: List[Layer] = self.fix_input_output()
         self.output_layer: Layer = self.create_output_layer(self.layers)
         self.torch_model: IndividualModel = self.realize_model()
         self.optimizer: TorchOptimizer = np.random.choice(TORCH_OPTIMIZERS)()
@@ -256,26 +255,17 @@ class Individual:
                 raise RuntimeError(f"Invalid `None` in realized_layers[{i}]: {realized_layers}")
         return realized_layers
 
-    def fix_input_output(self) -> List[Layer]:
-        # input_output_layerfix: List[Layer] = []
-        # # + 1 for input node
-        # layers: List[Type[Layer]] = np.random.choice(
-        #     TORCH_NODES_2D, size=self.n_nodes + 1, replace=True
-        # )
-        # prev: Layer = layers[0]
-
-        # # loop over the random selection of layers and make sure input and output shapes align
-        # for i, layer in enumerate(layers):
-        #     # Special handling of input layer. This is in fact the most important step
-        #     node = layer(input_shape=self.input_shape if i == 0 else prev.output_shape)
-        #     for size in node.output_shape[1:]:
-        #         if size <= 0:
-        #             raise VanishingError("Convolutional layers have reduced output to zero size.")
-        #     # node.create()
-        #     prev = node
-        #     input_output_layerfix.append(node)
-        # """ Fix the input and o/p size of the layers before mutation"""
-        raise NotImplementedError("Try to fix your i/p & o/p sizes before mutation")
+    def fix_input_output(self) -> None:
+        prev: Layer = self.layers[0]
+        for i, layer in enumerate(self.layers):
+            # we need to correct the input_shape and output_shape
+            if i == 0:
+                continue
+            self.layers[i] = layer.__class__(input_shape=prev.output_shape)
+            for size in self.layers[i].output_shape[1:]:
+                if size <= 0:
+                    raise VanishingError("Convolutional layers have reduced output to zero size.")
+            prev = self.layers[i]
 
     def create_output_layer(self, layers: List[Layer]) -> ClassificationOutput:
         if self.task == "classification":
@@ -366,7 +356,7 @@ class Individual:
         swap_layers: bool = False,
         delete_layers: bool = False,
         optimizer: bool = False,
-    ) -> Individual:
+    ) -> Optional[Individual]:
         mutated = self.mutate_parameters(prob)
         if add_layers:
             mutated = mutated.mutate_new_layer(prob)
@@ -376,9 +366,13 @@ class Individual:
             mutated = mutated.mutate_delete_layer(prob)
         if optimizer:
             mutated.optimizer = mutated.optimizer.mutate(prob, method)
-        mutated.output_layer = mutated.create_output_layer(mutated.layers)
-        mutated.torch_model = mutated.realize_model()
-        return mutated
+        try:
+            mutated.fix_input_output()
+            mutated.output_layer = mutated.create_output_layer(mutated.layers)
+            mutated.torch_model = mutated.realize_model()
+            return mutated
+        except VanishingError:
+            return None
 
     def mutate_parameters(self, prob: float = 0.1, method: ArgMutation = "random") -> Individual:
         """Change the parameters of the internal layers only

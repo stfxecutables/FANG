@@ -256,8 +256,8 @@ class Generation:
         self.attempts_per_individual = attempts_per_individual
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
-        # self.fast_dev_run = fast_dev_run
-        self.fast_dev_run = population.fast_dev_run  # ensure we override this
+        self.fast_dev_run = fast_dev_run
+        # self.fast_dev_run = population.fast_dev_run  # ensure we override this
         return self
 
     @no_type_check
@@ -318,6 +318,7 @@ class Generation:
             activation_interval=self.activation_interval,
             attempts_per_individual=self.attempts_per_individual,
             attempts_per_generation=self.attempts_per_generation,
+            fast_dev_run=self.fast_dev_run,
         )
         next_gen.hall = self.hall
         return next_gen
@@ -372,8 +373,6 @@ class Generation:
         assert self.state == State.SAVED
         assert self.survivors is not None
 
-        individual: Individual
-        mutated = []
         mutation_options = dict(
             prob=self.mutation_prob,
             method=self.mutation_method,
@@ -382,15 +381,18 @@ class Generation:
             delete_layers=self.delete_layers,
             optimizer=self.mutate_optimizer,
         )
-        for individual in self.survivors:
-            mutated.append(individual.mutate(**mutation_options))
-        self.mutated = Population(mutated, fast_dev_run=self.fast_dev_run)
+        # for individual in self.survivors:
+        #     mutated.append(individual.mutate(**mutation_options))
+        # self.mutated = Population(mutated, fast_dev_run=self.fast_dev_run)
+        self.mutated = self.survivors.mutate(**mutation_options)
+        self.mutated.fast_dev_run = self.fast_dev_run
         self.state = State.MUTATED
 
     def cross(self) -> None:
         assert self.state == State.MUTATED
         """From mutated survivors, get crossover pairs and perform crossover"""
         self.crossed = self.mutated.crossover()  # type: ignore
+        self.crossed.fast_dev_run = self.fast_dev_run
         self.state = State.CROSSED
 
     def set_offspring(self) -> None:
@@ -410,4 +412,4 @@ class Generation:
         survivors = list(
             filter(lambda ind: ind.fitness >= self.survival_threshold, self.progenitors)
         )
-        return Population(survivors)
+        return Population(survivors, fast_dev_run=self.fast_dev_run)

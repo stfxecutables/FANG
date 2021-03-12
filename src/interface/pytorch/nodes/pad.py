@@ -15,7 +15,7 @@ class Padding(ReshapingLayer):
     MAX_PAD = 5
 
     ARGS = {
-        "padding": ("int", (0, MAX_PAD)),
+        "padding": ("int", (1, MAX_PAD)),
         # "padding_tuple": ("tuple", ((0,MAX_PAD), (0,MAX_PAD), (0,MAX_PAD), (0,MAX_PAD))),
     }
 

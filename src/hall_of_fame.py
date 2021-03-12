@@ -26,6 +26,9 @@ class HallOfFame:
     def fitnesses(self) -> List[float]:
         return list(map(lambda ind: ind.fitness, self.hall))  # type: ignore
 
+    def best(self) -> Individual:
+        return self.hall[0]
+
     def update(self, survivors: Population) -> None:
         """Compare the individuals in `survivors` to those in `self.hall`, and update `self.hall` to
         include the individuals with the `size` highest-fitness individuals from both
