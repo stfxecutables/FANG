@@ -72,8 +72,12 @@ class IndividualModel(TorchModule):
         for layer, interface in zip(self.layers, self.interfaces):
             x = layer(x)
             if x.shape[2:] != interface.output_shape[1:]:
+                name = interface.__class__.__name__
                 raise RuntimeError(
-                    f"Interface {interface} shape is out of sync with actual shape {x.shape}"
+                    f"ShapingError: {name} interface is out of sync with Torch actual shape:\n"
+                    f"    {name}.input_shape:   {interface.input_shape}\n"
+                    f"    {name}.output_shape:  {interface.output_shape}\n"
+                    f"    Torch Tensor x.shape: {tuple(x.shape[1:])}"
                 )
         return x
 
@@ -179,8 +183,8 @@ class Individual:
         self.framework: Framework = framework
 
         self.layers: List[Layer] = self.create_random_nodes()
-        self.output_layer: Layer = self.create_output_layer(self.layers)
         # self.input_output_fixes: List[Layer] = self.fix_input_output()
+        self.output_layer: Layer = self.create_output_layer(self.layers)
         self.torch_model: IndividualModel = self.realize_model()
         self.optimizer: TorchOptimizer = np.random.choice(TORCH_OPTIMIZERS)()
 
@@ -491,4 +495,5 @@ class Individual:
             json.dump(self.as_dict(), file, check_circular=True, indent=2, sort_keys=True)
         with open(txtfile, "w") as file:
             file.write(str(self))
+            file.write("\n")
         torch.save(self.torch_model, str(torchfile))
