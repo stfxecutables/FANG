@@ -1,4 +1,5 @@
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Union
 
 import numpy as np
@@ -16,6 +17,22 @@ def test_create() -> None:
     ind = get_individual(50)
     print(ind)
     print(ind.torch_model)
+
+
+def test_save() -> None:
+    ind = get_individual(50)
+    tmpdir = TemporaryDirectory()
+    path = Path(tmpdir.name)
+    json = path / f"{ind.uuid}.json"
+    torch = path / f"{ind.uuid}.pt"
+    txt = path / f"{ind.uuid}.txt"
+    try:
+        ind.save(path)
+        assert json.exists()
+        assert torch.exists()
+        assert txt.exists()
+    finally:
+        tmpdir.cleanup()
 
 
 class TestCloning:

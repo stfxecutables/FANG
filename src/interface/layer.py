@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
@@ -78,6 +77,18 @@ class Layer(Evolver, PyTorch):
         # order below is IMPORTANT, want to update OUT with ARGS
         self.args = Arguments(self.ARGS)
         self.args.arg_values.update(channel_argvals)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            self.__class__.__name__: {
+                "created": self.torch is not None,
+                "input_shape": self.input_shape,
+                "in_channels": self.in_channels,
+                "out_channels": self.out_channels,
+                "output_shape": self.output_shape,
+                "args": self.args.as_dict(),
+            }
+        }
 
     def clone(self) -> Layer:
         cloned = self.__class__(self.input_shape)

@@ -1,7 +1,7 @@
 from __future__ import annotations  # noqa
 
 from copy import deepcopy
-from typing import List, Optional, Tuple, Union, cast, no_type_check
+from typing import Any, Dict, List, Optional, Tuple, Union, cast, no_type_check
 
 import numpy as np
 import torch as t
@@ -91,6 +91,18 @@ class FinalLinear2d(Module):
         return x
 
 
+class Output(Module):
+    def __init__(self, layers: List[Module]) -> None:
+        super().__init__()
+        self.layers = ModuleList(layers)
+
+    @no_type_check
+    def forward(self, x: Tensor) -> Tensor:
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+
 class ClassificationOutput(PyTorch):
     """Assumes task is `classification`. Not this layer CANNOT be evolved.
 
@@ -165,19 +177,7 @@ class ClassificationOutput(PyTorch):
     def create(self) -> None:
         """Build the Torch Module depending on the options"""
         layers = self.__build_layers()
-
-        class Output(Module):
-            def __init__(self) -> None:
-                super().__init__()
-                self.layers = ModuleList(layers)
-
-            @no_type_check
-            def forward(self, x: Tensor) -> Tensor:
-                for layer in self.layers:
-                    x = layer(x)
-                return x
-
-        self.torch = cast(Module, Output())
+        self.torch = cast(Module, Output(layers))
 
     def clone(self) -> ClassificationOutput:
         cloned = ClassificationOutput(**self.constructor_args)  # type: ignore
@@ -252,6 +252,19 @@ class ClassificationOutput(PyTorch):
             return strider, strider_out
         else:
             raise ValueError("Invalid reduction option.")
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "ClassificationOutput": {
+                "created": self.torch is not None,
+                "input_shape": self.input_shape,
+                "in_channels": self.in_channels,
+                "output_shape": self.output_shape,
+                "out_channels": self.out_channels,
+                "reductions": self.reductions,
+                "constructor_args": self.constructor_args,
+            }
+        }
 
     def __str__(self) -> str:
         header = f"{self.__class__.__name__} interface"

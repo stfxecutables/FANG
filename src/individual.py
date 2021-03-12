@@ -1,16 +1,20 @@
 from __future__ import annotations
-from typing import Dict, List, Optional, Tuple, Union, no_type_check, Type
+
+import json
+import sys
 from copy import deepcopy
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, no_type_check
+from uuid import uuid1
 
 import numpy as np
-import sys
 import torch
 from torch import Tensor as TorchTensor
 from torch.nn import Module as TorchModule
 from typing_extensions import Literal
-from src.interface.arguments import ArgMutation
 
 from src.exceptions import VanishingError
+from src.interface.arguments import ArgMutation
 from src.interface.initializer import Framework
 from src.interface.layer import Layer
 from src.interface.pytorch.lightning.train import train_sequential
@@ -181,6 +185,7 @@ class Individual:
         self.optimizer: TorchOptimizer = np.random.choice(TORCH_OPTIMIZERS)()
 
         self.fitness: Optional[float] = None
+        self.uuid: str = str(uuid1())
 
     def __copy__(self) -> str:
         # NOTE: DO NOT MODIFY THIS FUNCTION
@@ -460,3 +465,30 @@ class Individual:
         mutated = self.clone(clone_fitness=False, sequential=None)
         mutated.layers[idx1], mutated.layers[idx2] = mutated.layers[idx2], mutated.layers[idx1]
         return mutated
+
+    def as_dict(self) -> Dict[str, Any]:
+        serializable: Dict[str, Any] = {"Individual": {}}
+        for attr in self.__dict__.keys():
+            if attr in ["torch_model", "optimizer"]:  # need to be saved with torch.save
+                continue
+            elif attr in ["output_layer"]:  # to to call as_dict()
+                serializable["Individual"][attr] = getattr(self, attr).as_dict()
+            elif attr in ["layers"]:  # to to call as_dict()
+                layers = getattr(self, attr)
+                layer_dicts = [layer.as_dict() for layer in layers]
+                serializable["Individual"][attr] = layer_dicts
+            else:
+                serializable["Individual"][attr] = getattr(self, attr)
+        return serializable
+
+    def save(self, dir: Path) -> None:
+        if not Path(dir).is_dir():
+            raise ValueError("`dir` must be a directory.")
+        jsonfile = dir / f"{self.uuid}.json"
+        torchfile = dir / f"{self.uuid}.pt"
+        txtfile = dir / f"{self.uuid}.txt"
+        with open(jsonfile, "w") as file:
+            json.dump(self.as_dict(), file, check_circular=True, indent=2, sort_keys=True)
+        with open(txtfile, "w") as file:
+            file.write(str(self))
+        torch.save(self.torch_model, str(torchfile))

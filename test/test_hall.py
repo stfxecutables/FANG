@@ -1,8 +1,10 @@
-import pytest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
-from tempfile import TemporaryDirectory
-from src.generation import Generation, HallOfFame
+import pytest
+
+from src.generation import HallOfFame
 from test.utils import get_pop
 
 
@@ -52,7 +54,6 @@ class TestHallOfFame:
 
         tmpdir = TemporaryDirectory()
         try:
-            hall.save(tmpdir)
+            hall.save(Path(tmpdir.name))
         finally:
             tmpdir.cleanup()
-

@@ -1,10 +1,9 @@
 from __future__ import annotations  # noqa
 
 from copy import deepcopy
-from typing import Any, Dict, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
-from typing import List
 from typing_extensions import Literal
 
 from src.interface.evolver import Evolver
@@ -75,11 +74,14 @@ class ArgDef:
 
     def __init__(self, name: str, kind: ArgKind = "int", domain: Optional[Domain] = None) -> None:
         self.name = name
-        self.dtype: Any = None
         self.kind, self.domain = self.validate_args(kind, domain)
 
     def clone(self) -> ArgDef:
         return deepcopy(self)  # below is safe since we only use basic Python types here
+
+    def as_dict(self) -> Dict[str, Dict[str, Any]]:
+        """For converting to json only"""
+        return {"ArgDef": self.__dict__}
 
     def random_value(self) -> Union[bool, str, float, int]:
         """Returns a random valid parameter value of the appropriate kind / type."""
@@ -105,7 +107,6 @@ class ArgDef:
         kind = self.validate_kind(kind)
         if domain is None:
             if kind == "bool":
-                self.dtype = bool
                 return kind, (True, False)
             else:
                 raise ValueError("`domain` must be specified for any argument kind except `bool`.")
@@ -128,7 +129,6 @@ class ArgDef:
             for d in domain:
                 if not (isinstance(d, str) or isinstance(d, int)):
                     raise ValueError("enum / flag types can be only either strings or ints.")
-            self.dtype = Union[str, int]
             return kind, domain
         elif kind == "int":
             if not isinstance(domain[0], int) or len(domain) != 2:
@@ -258,6 +258,17 @@ class Arguments(Evolver):
                 newval = cloned.arg_definitions[argname].random_value()
                 cloned.arg_values[argname] = newval
         return cloned
+
+    def as_dict(self) -> Dict[str, Any]:
+        """For converting to json only"""
+        return {
+            "Arguments": {
+                "arg_definitions": {
+                    argname: argdef.as_dict() for argname, argdef in self.arg_definitions.items()
+                },
+                "arg_values": self.arg_values,
+            }
+        }
 
     def _randomize_argvals(self) -> None:
         self.arg_values = {

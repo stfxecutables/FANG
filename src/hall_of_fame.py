@@ -1,29 +1,10 @@
 from __future__ import annotations
-from enum import Enum
-
-from src.interface.arguments import ArgMutation
-from src.interface.pytorch.optimizer import Optimizer
-from src.individual import Individual
-from src.population import Population
-from src.interface.evolver import Evolver
-from src.individual import Individual, Task
-from src.interface.evolver import Evolver
-from src.interface.initializer import Framework
-from src.exceptions import VanishingError
-
-from typing import Any, Dict, List, Optional, Tuple, Union, Type
-from typing import cast, no_type_check
-from typing_extensions import Literal
 
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import List
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sbn
-from numpy import ndarray
-from pandas import DataFrame, Series
+from src.individual import Individual
+from src.population import Population
 
 
 class HallOfFame:
@@ -77,7 +58,7 @@ class HallOfFame:
 
         raise NotImplementedError()
 
-    def save(self, directory: Path) -> None:
+    def save(self, dir: Path) -> None:
         """Save the hall of fame individuals to `directory`.
 
         Parameters
@@ -90,5 +71,6 @@ class HallOfFame:
         We need to make a strong distinction between saving the architecture and saving the trained
         model.
         """
-        assert directory.is_dir()
-        raise NotImplementedError()
+        assert dir.is_dir()
+        for individual in self.hall:
+            individual.save(dir)

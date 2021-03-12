@@ -1,3 +1,5 @@
+from json import dumps
+
 import pytest
 
 from src.interface.layer import Layer
@@ -14,8 +16,8 @@ from src.interface.pytorch.nodes.conv import Conv2d, UpConv2d
 from src.interface.pytorch.nodes.drop import Dropout, Dropout2d
 from src.interface.pytorch.nodes.linear import Linear
 from src.interface.pytorch.nodes.norm import BatchNorm2d, InstanceNorm2d, LayerNorm
+from src.interface.pytorch.nodes.pad import ReflectionPadding, ReplicationPadding, ZeroPadding
 from src.interface.pytorch.nodes.pool import AveragePool2d, MaxPool2d
-from src.interface.pytorch.nodes.pad import ZeroPadding, ReplicationPadding, ReflectionPadding
 
 P = 0.33
 
@@ -31,6 +33,8 @@ def use_layer_methods(layer: Layer) -> None:
     print(instance.clone())
     print("Mutated:")
     print(instance.mutate(P))
+    d = instance.as_dict()
+    dumps(d)  # make sure it is json-able
 
 
 @pytest.mark.spec
