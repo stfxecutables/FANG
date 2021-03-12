@@ -24,7 +24,7 @@ class HallOfFame:
         return len(self.hall)
 
     def fitnesses(self) -> List[float]:
-        return list(map(lambda ind: ind.fitness, self.hall))
+        return list(map(lambda ind: ind.fitness, self.hall))  # type: ignore
 
     def update(self, survivors: Population) -> None:
         """Compare the individuals in `survivors` to those in `self.hall`, and update `self.hall` to
@@ -36,27 +36,9 @@ class HallOfFame:
             List of individuals that have survived selection.
         """
 
-        fitness_best = []
-
-        survivors.evaluate_fitnesses()
-        best_survivors = list(survivors.select_best(self.size))
-
-        if len(self.hall) == 0:
-            self.hall = best_survivors[: self.size]
-
-        else:
-            self.hall.extend(best_survivors)
-            for i, ind in enumerate(self.hall):
-                fitness_best.append(ind.fitness)
-
-            idx_sort = sorted(range(len(fitness_best)), key=lambda k: fitness_best[k], reverse=True)
-
-            fitness_best = [fitness_best[i] for i in idx_sort][: self.size]
-            self.hall = [self.hall[i] for i in idx_sort][: self.size]
-
-        return None
-
-        raise NotImplementedError()
+        self.hall.extend(survivors.individuals)
+        self.hall.sort(key=lambda ind: ind.fitness, reverse=True)
+        self.hall = self.hall[: self.size]
 
     def save(self, dir: Path) -> None:
         """Save the hall of fame individuals to `directory`.
