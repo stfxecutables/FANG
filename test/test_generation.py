@@ -72,8 +72,13 @@ class TestGeneration:
 
 
 def test_next(capsys: Any) -> None:
-    gen = get_gen(10, fast_dev_run=False)
+    gen = get_gen(10, fast_dev_run=True)
     tmpdir = TemporaryDirectory()
     path = Path(tmpdir.name)
     with capsys.disabled():
-        gen = gen.next(survivor_dir=path)
+        print("\n{:=^80}".format("  Beginning evolution...  "))
+        for i in range(5):
+            print("{:-^80}".format(f"  Generation {i}  "))
+            gen = gen.next(survivor_dir=path)
+            print("Fitnesses:")
+            print(np.round(gen.hall.fitnesses(), 3))

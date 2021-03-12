@@ -2,6 +2,7 @@ from __future__ import annotations  # noqa
 
 import sys
 from copy import deepcopy
+from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
@@ -371,3 +372,10 @@ class Population(Evolver):
             output_shape=self.output_shape,
             sequential=self.is_sequential,
         )
+
+    def save(self, dir: Path) -> None:
+        dir = Path(dir)
+        if not dir.is_dir():
+            raise ValueError("`dir` must be a directory.")
+        for individual in self:
+            individual.save(dir)

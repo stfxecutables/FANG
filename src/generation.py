@@ -143,7 +143,7 @@ class Generation:
         task: Task = None,
         input_shape: Union[int, Tuple[int, ...]] = None,
         output_shape: Union[int, Tuple[int, ...]] = None,
-        survival_threshold: float = 0.5,
+        survival_threshold: float = 0.0,
         mutation_probability: float = 0.1,
         crossover: bool = False,
         mutation_method: ArgMutation = "random",
@@ -209,7 +209,7 @@ class Generation:
     def from_population(
         cls: Type[Generation],
         population: Population,
-        survival_threshold: float = 0.1,
+        survival_threshold: float = 0.0,
         mutation_probability: float = 0.1,
         crossover: bool = False,
         mutation_method: ArgMutation = "random",
@@ -226,7 +226,7 @@ class Generation:
     ) -> Generation:
         self: Generation = cls.__new__(cls)
 
-        self.survival_threshold = float(survival_threshold)
+        self.survival_threshold = float(survival_threshold) if not fast_dev_run else 0.0
         self.do_crossover = crossover
 
         self.mutation_prob = mutation_probability
@@ -245,6 +245,7 @@ class Generation:
         self.offspring = None
 
         self.state = State.INITIALIZED
+        self.size = len(population)
         self.progenitors = population
         self.input_shape = population.input_shape
         self.output_shape = population.output_shape
@@ -255,8 +256,8 @@ class Generation:
         self.attempts_per_individual = attempts_per_individual
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
-        self.fast_dev_run = fast_dev_run
-        population.fast_dev_run = self.fast_dev_run  # ensure we override this
+        # self.fast_dev_run = fast_dev_run
+        self.fast_dev_run = population.fast_dev_run  # ensure we override this
         return self
 
     @no_type_check
@@ -368,11 +369,11 @@ class Generation:
         self.state = State.SAVED
 
     def mutate_survivors(self) -> None:
-        assert self.state == State.SURVIVED
+        assert self.state == State.SAVED
         assert self.survivors is not None
 
         individual: Individual
-        self.mutated = []
+        mutated = []
         mutation_options = dict(
             prob=self.mutation_prob,
             method=self.mutation_method,
@@ -382,7 +383,8 @@ class Generation:
             optimizer=self.mutate_optimizer,
         )
         for individual in self.survivors:
-            self.mutated.append(individual.mutate(**mutation_options))
+            mutated.append(individual.mutate(**mutation_options))
+        self.mutated = Population(mutated, fast_dev_run=self.fast_dev_run)
         self.state = State.MUTATED
 
     def cross(self) -> None:
