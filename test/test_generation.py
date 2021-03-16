@@ -39,6 +39,7 @@ class TestGeneration:
 
     def test_get_survivors(self, capsys: Any) -> None:
         gen = get_gen(10)
+        gen.survival_threshold = 0.5
         for i, ind in enumerate(gen.progenitors):
             if i < 5:
                 ind.fitness = np.random.uniform(0.8, 1)
