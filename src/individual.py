@@ -13,7 +13,7 @@ from torch import Tensor as TorchTensor
 from torch.nn import Module as TorchModule
 from typing_extensions import Literal
 
-from src.exceptions import VanishingError
+from src.exceptions import ShapingError, VanishingError
 from src.interface.arguments import ArgMutation
 from src.interface.initializer import Framework
 from src.interface.layer import Layer
@@ -66,19 +66,25 @@ class IndividualModel(TorchModule):
         self.interfaces = interfaces
         # ModuleList is needed to ensure parameters can be found
         self.layers = torch.nn.ModuleList(layers)
+        self.sanity_checked: bool = False
 
     @no_type_check
     def forward(self, x: TorchTensor) -> TorchTensor:
+        if not self.sanity_checked:
+            for layer, interface in zip(self.layers, self.interfaces):
+                x = layer(x)
+                if x.shape[2:] != interface.output_shape[1:]:
+                    name = interface.__class__.__name__
+                    raise ShapingError(
+                        f"{name} interface is out of sync with Torch actual shape:\n"
+                        f"    {name}.input_shape:   {interface.input_shape}\n"
+                        f"    {name}.output_shape:  {interface.output_shape}\n"
+                        f"    Torch Tensor x.shape: {tuple(x.shape[1:])}"
+                    )
+            self.sanity_checked
+            return x
         for layer, interface in zip(self.layers, self.interfaces):
             x = layer(x)
-            if x.shape[2:] != interface.output_shape[1:]:
-                name = interface.__class__.__name__
-                raise RuntimeError(
-                    f"ShapingError: {name} interface is out of sync with Torch actual shape:\n"
-                    f"    {name}.input_shape:   {interface.input_shape}\n"
-                    f"    {name}.output_shape:  {interface.output_shape}\n"
-                    f"    Torch Tensor x.shape: {tuple(x.shape[1:])}"
-                )
         return x
 
     def clone(self) -> IndividualModel:
