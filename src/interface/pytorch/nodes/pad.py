@@ -30,7 +30,11 @@ class Padding(ReshapingLayer):
         # order below is IMPORTANT, want to update OUT with ARGS
         self.args = Arguments({**self.OUT, **self.ARGS})
         self.args.arg_values.update(channel_argvals)
-
+        # we need to adjust random padding in case when image size is small, or get:
+        # RuntimeError: Padding size should be less than the corresponding input dimension
+        max_pad = min(input_shape[1:]) - 1
+        current_pad = self.args.arg_values["padding"]
+        self.args.arg_values["padding"] = min(max_pad, current_pad)
         self.out_channels = self.args.arg_values["out_channels"]
         self.output_shape = self._output_shape()
 
