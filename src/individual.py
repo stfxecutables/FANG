@@ -322,37 +322,37 @@ class Individual:
                 setattr(clone, prop, value)
 
         clone.layers = [layer.clone() for layer in self.layers]
-        for layer in clone.layers:
-            layer.create()
-        clone.output_layer = self.output_layer.clone()
-        if sequential == "clone":
-            raise NotImplementedError("Cloning nn.Module is not implemented yet")
-            # clone.sequential_model = self.sequential_model.clone()
-        elif sequential == "create":
-            clone.torch_model = clone.realize_model()
-        elif sequential is None:
-            pass
-        else:
-            raise ValueError("Valid options for `sequential` are 'clone', 'create' or `None`.")
-
         clone.optimizer = self.optimizer.clone()
-        # unfortunately, python deepcopy is shit and does not work, because if you write e.g.
+        clone.output_layer = self.output_layer.clone()
+        # unfortunately, python deepcopy does not work with floats, because if you write e.g.
         #
         #                   x = 1.0; y = deepcopy(x)
         #                   print(x is y)
         #
-        # you see "True". This is trash behaviour, and in general the behaviour of `deepcopy` is not
-        # what anyone really wants. Even:
+        # you see "True". This is trash behaviour, and in general the behaviour of `deepcopy`
+        # for floats is not what anyone really wants. Even:
         #
         #                   x = 1.0; y = float(x)
         #                   print(x is y)
         #
-        # stll result in a `True`. Instead, I have resorted floating-point trickery
+        # still results in a `True`. So we force a new float with multiplication by 1.0...
         if self.fitness is not None:
-            eps = sys.float_info.epsilon
-            f = float(self.fitness) + eps - eps
+            # eps = sys.float_info.epsilon
+            # f = float(self.fitness) + eps - eps
+            f = float(self.fitness) * 1.0  # force a copy...
             clone.fitness = f if clone_fitness else None
-        return clone
+        if sequential == "clone":
+            raise NotImplementedError("Cloning nn.Module is not implemented yet")
+            # clone.sequential_model = self.sequential_model.clone()
+        elif sequential == "create":
+            for layer in clone.layers:
+                layer.create()
+            clone.torch_model = clone.realize_model()
+            return clone
+        elif sequential is None:
+            return clone
+        else:
+            raise ValueError("Valid options for `sequential` are 'clone', 'create' or `None`.")
 
     def mutate(
         self,
