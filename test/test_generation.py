@@ -9,7 +9,7 @@ from test.utils import get_pop
 from typing import Any
 
 
-def get_gen(size: int = 10, fast_dev_run: bool = True) -> Generation:
+def get_gen(size: int = 10, fast_dev_run: bool = True, **kwargs: Any) -> Generation:
     return Generation(
         size=size,
         n_nodes=10,
@@ -19,6 +19,7 @@ def get_gen(size: int = 10, fast_dev_run: bool = True) -> Generation:
         attempts_per_individual=50,
         attempts_per_generation=50,
         fast_dev_run=fast_dev_run,
+        **kwargs,
     )
 
 
@@ -72,16 +73,24 @@ class TestGeneration:
         assert gen.state == State.CROSSED
 
 
-def test_next(capsys: Any) -> None:
-    gen = get_gen(10, fast_dev_run=True)
+# @pytest.fixture()
+# def name(pytestconfig: Any) -> Any:
+#     return pytestconfig.getoption("full")
+
+
+def test_next(capsys: Any, full_run: bool, generations: int) -> None:
+    gen = get_gen(
+        # 10, fast_dev_run=not full_run, add_layers=True, swap_layers=True, delete_layers=True
+        10, fast_dev_run=not full_run, add_layers=True
+    )
     tmpdir = TemporaryDirectory()
     path = Path(tmpdir.name)
     with capsys.disabled():
         print("\n{:=^80}".format("  Beginning evolution...  "))
-        for i in range(5):
-            print("{:-^80}".format(f"  Generation {i}  "))
+        for i in range(generations):
+            print("{:-^80}".format(f"  Generation {i + 1}  "))
             gen = gen.next(survivor_dir=path)
-            gen.fast_dev_run = True
+            gen.fast_dev_run = not full_run
             print("Hall of Fame Fitnesses:")
             print(np.round(gen.hall.fitnesses(), 3))
             print("Best Hall of Fame model:")
