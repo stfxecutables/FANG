@@ -57,7 +57,7 @@ class TestGeneration:
         for ind in gen.progenitors:
             ind.fitness = np.random.uniform(0, 1)
         gen.survivors = gen.progenitors
-        gen.state = State.SURVIVED
+        gen.state = State.SAVED
         with capsys.disabled():
             gen.mutate_survivors()
         assert gen.state == State.MUTATED
