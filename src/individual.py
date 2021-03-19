@@ -72,14 +72,32 @@ class IndividualModel(TorchModule):
     def forward(self, x: TorchTensor) -> TorchTensor:
         if not self.sanity_checked:
             for layer, interface in zip(self.layers, self.interfaces):
+                input_shape = tuple(x.shape[1:])
+                if x.shape[2:] != interface.input_shape[1:]:
+                    name = interface.__class__.__name__
+                    raise ShapingError(
+                        f"{name} interface input_shape is out of sync with Torch actual shape:\n"
+                        f"    {name}.input_shape:   {interface.input_shape}\n"
+                        f"    {name}.output_shape:  {interface.output_shape}\n"
+                        f"    Torch input Tensor x.shape: {input_shape}\n"
+                        f"in IndividualModel:\n"
+                        f"{self}\n"
+                        "with interfaces:\n"
+                        f"{self.interface_str()}\n"
+                    )
                 x = layer(x)
                 if x.shape[2:] != interface.output_shape[1:]:
                     name = interface.__class__.__name__
                     raise ShapingError(
-                        f"{name} interface is out of sync with Torch actual shape:\n"
+                        f"{name} interface output_shape is out of sync with Torch actual shape:\n"
                         f"    {name}.input_shape:   {interface.input_shape}\n"
                         f"    {name}.output_shape:  {interface.output_shape}\n"
-                        f"    Torch Tensor x.shape: {tuple(x.shape[1:])}"
+                        f"    Torch input Tensor x.shape: {input_shape}\n"
+                        f"    Torch output Tensor x.shape: {tuple(x.shape[1:])}\n"
+                        f"in IndividualModel:\n"
+                        f"{self}\n"
+                        "with interfaces:\n"
+                        f"{self.interface_str()}\n"
                     )
             self.sanity_checked
             return x
@@ -92,6 +110,9 @@ class IndividualModel(TorchModule):
         interfaces = [interface.clone() for interface in self.interfaces]
         cloned = IndividualModel(layers, interfaces)
         return cloned
+
+    def interface_str(self) -> str:
+        return "\n".join([str(interface) for interface in self.interfaces])
 
     def __str__(self) -> str:
         info = []
