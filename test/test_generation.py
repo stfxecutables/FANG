@@ -73,15 +73,16 @@ class TestGeneration:
         assert gen.state == State.CROSSED
 
 
-# @pytest.fixture()
-# def name(pytestconfig: Any) -> Any:
-#     return pytestconfig.getoption("full")
 
-
-def test_next(capsys: Any, full_run: bool, generations: int) -> None:
+def test_next(capsys: Any, full_run: bool, generations: int, mutation_prob: float) -> None:
     gen = get_gen(
-        # 10, fast_dev_run=not full_run, add_layers=True, swap_layers=True, delete_layers=True
-        10, fast_dev_run=not full_run, add_layers=True
+        10,
+        fast_dev_run=not full_run,
+        add_layers=True,
+        swap_layers=True,
+        delete_layers=True,
+        mutation_probability=mutation_prob,
+        # 10, fast_dev_run=not full_run, add_layers=True
     )
     tmpdir = TemporaryDirectory()
     path = Path(tmpdir.name)
