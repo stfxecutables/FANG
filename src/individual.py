@@ -395,7 +395,8 @@ class Individual:
         # NOTE: Dangerous! Could blow stack maybe if very unlucky.
         def try_fix(self: Any, mutated: Individual, args: Dict) -> Individual:
             try:
-                return mutated.fix_input_output()  # type: ignore
+                mutated.fix_input_output()
+                return mutated
             except VanishingError:
                 print("Cannot resolve input/output sizes. Generating new mutation.")
                 return self.mutate(**args)  # type: ignore
