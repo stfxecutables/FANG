@@ -17,7 +17,7 @@ class Pool(ReshapingLayer):
     MAX_KERNEL = 3
     MAX_STRIDE = 3
     MAX_PAD = 6  # TODO: tie to kernel_size, string, padding, and dilation instead
-    MAX_DILATE = 3
+    MAX_DILATE = 2  # Don't dilate, effectively
 
     ARGS = {
         "kernel_size": ("int", (1, MAX_KERNEL)),
@@ -71,6 +71,7 @@ class MaxPool2d(Pool, PyTorch):
         args = self.args.clone().arg_values
         del args["out_channels"]
         del args["in_channels"]
+        # args["ceil_mode"] = True
         self.torch = torch.nn.MaxPool2d(**args)
 
 

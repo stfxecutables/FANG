@@ -10,7 +10,14 @@ from src.interface.layer import ReshapingLayer
 
 
 class Padding(ReshapingLayer):
-    """This class should abstract over the similar components of the Padding layers"""
+    """This class should abstract over the similar components of the Padding layers
+
+    Note
+    ----
+    We need to keep all image sizes *even* for pooling layers. This means padding must be odd if
+    input is odd, and even if input is even.
+
+    """
 
     MAX_PAD = 5
 
