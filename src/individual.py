@@ -285,10 +285,9 @@ class Individual:
     def fix_input_output(self) -> None:
         prev: Layer = self.layers[0]
         for i, layer in enumerate(self.layers):
-            # we need to correct the input_shape and output_shape
-            if i == 0:
-                continue
-            self.layers[i] = layer.__class__(input_shape=prev.output_shape)
+            self.layers[i] = layer.__class__(
+                input_shape=prev.output_shape if i != 0 else self.input_shape
+            )
             for size in self.layers[i].output_shape[1:]:
                 if size <= 0:
                     raise VanishingError("Convolutional layers have reduced output to zero size.")
@@ -384,6 +383,23 @@ class Individual:
         delete_layers: bool = False,
         optimizer: bool = False,
     ) -> Optional[Individual]:
+        args = dict(
+            prob=0.1,
+            method="random",
+            add_layers=False,
+            swap_layers=False,
+            delete_layers=False,
+            optimizer=False,
+        )
+
+        # NOTE: Dangerous! Could blow stack maybe if very unlucky.
+        def try_fix(self: Any, mutated: Individual, args: Dict) -> Individual:
+            try:
+                return mutated.fix_input_output()  # type: ignore
+            except VanishingError:
+                print("Cannot resolve input/output sizes. Generating new mutation.")
+                return self.mutate(**args)  # type: ignore
+
         mutated = self.mutate_parameters(prob)
         if add_layers:
             mutated = mutated.mutate_new_layer(prob)
@@ -393,13 +409,10 @@ class Individual:
             mutated = mutated.mutate_delete_layer(prob)
         if optimizer:
             mutated.optimizer = mutated.optimizer.mutate(prob, method)
-        try:
-            mutated.fix_input_output()
-            mutated.output_layer = mutated.create_output_layer(mutated.layers)
-            mutated.torch_model = mutated.realize_model()
-            return mutated
-        except VanishingError:
-            return None
+        mutated = try_fix(self, mutated, args)  # mutate again if unfixable
+        mutated.output_layer = mutated.create_output_layer(mutated.layers)
+        mutated.torch_model = mutated.realize_model()
+        return mutated
 
     def mutate_parameters(self, prob: float = 0.1, method: ArgMutation = "random") -> Individual:
         """Change the parameters of the internal layers only
