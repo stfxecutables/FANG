@@ -14,10 +14,10 @@ from src.interface.layer import Layer, ReshapingLayer
 class Pool(ReshapingLayer):
     """This class should abstract over the similar components of the Pooling layers"""
 
-    MAX_KERNEL = 13
-    MAX_STRIDE = 5
-    MAX_PAD = 5  # TODO: tie to kernel_size, string, padding, and dilation instead
-    MAX_DILATE = 5
+    MAX_KERNEL = 3
+    MAX_STRIDE = 3
+    MAX_PAD = 6  # TODO: tie to kernel_size, string, padding, and dilation instead
+    MAX_DILATE = 2  # Don't dilate, effectively
 
     ARGS = {
         "kernel_size": ("int", (1, MAX_KERNEL)),
@@ -43,6 +43,9 @@ class Pool(ReshapingLayer):
             int(np.random.randint(0, kernel // 2)) if kernel >= 2 else 0
         )
 
+        # Handle some special cases relating to valid kernel sizes for small inputs
+        # RuntimeError:
+        #   Given input size: (1x28x28) calculated output size: (1x-1x-1). Output size is too small
         self.out_channels = self.args.arg_values["out_channels"]
         self.output_shape = self._output_shape()
 
@@ -68,13 +71,14 @@ class MaxPool2d(Pool, PyTorch):
         args = self.args.clone().arg_values
         del args["out_channels"]
         del args["in_channels"]
+        # args["ceil_mode"] = True
         self.torch = torch.nn.MaxPool2d(**args)
 
 
 class AveragePool2d(Pool, PyTorch):
-    MAX_KERNEL = 13
-    MAX_STRIDE = 5
-    MAX_PAD = 5  # TODO: tie to kernel_size, string, padding, and dilation instead
+    MAX_KERNEL = 3
+    MAX_STRIDE = 3
+    MAX_PAD = 6  # TODO: tie to kernel_size, string, padding, and dilation instead
 
     ARGS = {
         "kernel_size": ("int", (1, MAX_KERNEL)),

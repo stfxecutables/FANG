@@ -1,23 +1,19 @@
-from __future__ import annotations
-from os import replace
+from __future__ import annotations  # noqa
+
 import sys
+from copy import deepcopy
+from pathlib import Path
+from typing import Dict, Iterator, List, Optional, Tuple, Union
+
+import numpy as np
+from typing_extensions import Literal
+
 from src.crossover import cross_individuals
+from src.exceptions import VanishingError
 from src.individual import Individual, Task
+from src.interface.arguments import ArgMutation
 from src.interface.evolver import Evolver
 from src.interface.initializer import Framework
-from src.exceptions import VanishingError
-from numpy import ndarray
-from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union, Iterator, Dict
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sbn
-from pandas import DataFrame, Series
-
-from typing import Any, List, Tuple
-from typing_extensions import Literal
 
 PairingMethod = Literal["random", "best", "weighted-random"]
 
@@ -119,7 +115,7 @@ class Population(Evolver):
         if isinstance(individuals, list):
             self.individuals: List[Individual] = self.__validate_individuals(individuals)
             self.fitnesses: List[Optional[float]] = list(
-                map(lambda ind: ind.fitness, self.individuals)
+                map(lambda ind: ind.fitness, self.individuals)  # type: ignore
             )
             ind = individuals[0]
             self.input_shape = ind.input_shape
@@ -174,7 +170,7 @@ class Population(Evolver):
 
     def __str__(self) -> str:
         # NOTE: YOU SHOULD NOT NEED TO MODIFY THIS FUNCTION
-        e = "evaluated" if self.fitnesses is not None else "unevaluated"
+        e = "evaluated" if self.fitnesses is not None else "unevaluated"  # type: ignore
         return f"Population of size {len(self.individuals)} (fitnesses {e})."
 
     def __copy__(self) -> str:
@@ -203,6 +199,10 @@ class Population(Evolver):
 
     @staticmethod
     def __validate_individuals(individuals: List[Individual]) -> List[Individual]:
+        if len(individuals) == 0:
+            raise RuntimeError("We've run out of individuals!")
+        if None in individuals:
+            raise RuntimeError("One of our individuals is `None`")
         input_shape = individuals[0].input_shape
         output_shape = individuals[0].output_shape
         task = individuals[0].task
@@ -240,11 +240,27 @@ class Population(Evolver):
         )
 
     # NOTE: You must indeed modify (implement) all functions below!
-    def clone(self, *args: Any, **kwargs: Any) -> Population:
-        """Copies each individual and returns a new population. """
-        raise NotImplementedError()
 
-    def mutate(self, probability: float, *args: Any, **kwargs: Any) -> Population:
+    def clone(
+        self, clone_fitness: bool = True, sequential: Literal["clone", "create"] = None
+    ) -> Population:
+        """Copies each individual and returns a new population. """
+        args = dict(clone_fitness=clone_fitness, sequential=sequential)
+        clones = [ind.clone(**args) for ind in self]
+        pop = Population(clones)
+        if clone_fitness:
+            pop.fitnesses = deepcopy(self.fitnesses)
+        return pop
+
+    def mutate(
+        self,
+        prob: float,
+        method: ArgMutation = "random",
+        add_layers: bool = False,
+        swap_layers: bool = False,
+        delete_layers: bool = False,
+        optimizer: bool = False,
+    ) -> Population:
         """Calls the `.mutate` method of each individual with relevant arguments passed in here, and
         returns a new population of those mutated individuals.
 
@@ -260,7 +276,25 @@ class Population(Evolver):
             probability `probability`.
 
         """
-        raise NotImplementedError()
+        args = dict(
+            prob=prob,
+            method=method,
+            add_layers=add_layers,
+            swap_layers=swap_layers,
+            delete_layers=delete_layers,
+            optimizer=optimizer,
+        )
+        mutateds = []
+        for ind in self:
+            mutated: Optional[Individual] = None
+            count = 0
+            while mutated is None and count < 100:
+                mutated = ind.mutate(**args)
+                count += 1
+            mutateds.append(mutated)
+        if None in mutateds:
+            raise VanishingError("Couldn't get a mutation to produce a valid size.")
+        return Population(mutateds, fast_dev_run=self.fast_dev_run)
 
     def select_best(self, n: int) -> List[Individual]:
         """Gets the fitnesses of each individual and selects the top n individuals by fitness, in
@@ -277,7 +311,17 @@ class Population(Evolver):
             A List of the Individuals (references, not clones) with the best fitnesses.
 
         """
-        raise NotImplementedError()
+
+        if n > len(self.fitnesses):
+            raise RuntimeError(
+                f"Only {len(self.fitnesses)} individuals to choose from, but trying to choose {n}."
+            )
+        if len(self.fitnesses) == 0:
+            raise RuntimeError("Not enough individuals.")
+
+        idx_sort = np.argsort(-np.array(self.fitnesses))
+        best = (np.array(self.individuals)[idx_sort]).tolist()
+        return best[:n]  # type: ignore
 
     def get_crossover_pairs(
         self, n_pairs: int, method: PairingMethod
@@ -342,3 +386,9 @@ class Population(Evolver):
             sequential=self.is_sequential,
         )
 
+    def save(self, dir: Path) -> None:
+        dir = Path(dir)
+        if not dir.is_dir():
+            raise ValueError("`dir` must be a directory.")
+        for individual in self:
+            individual.save(dir)

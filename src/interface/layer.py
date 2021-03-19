@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa
 
 from abc import abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -78,9 +78,24 @@ class Layer(Evolver, PyTorch):
         self.args = Arguments(self.ARGS)
         self.args.arg_values.update(channel_argvals)
 
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            self.__class__.__name__: {
+                "created": self.torch is not None,
+                "input_shape": self.input_shape,
+                "in_channels": self.in_channels,
+                "out_channels": self.out_channels,
+                "output_shape": self.output_shape,
+                "args": self.args.as_dict(),
+            }
+        }
+
     def clone(self) -> Layer:
         cloned = self.__class__(self.input_shape)
         cloned.args = self.args.clone()
+        output_shape = getattr(self, "output_shape", None)
+        if output_shape is not None:
+            cloned.output_shape = output_shape
         return cloned
 
     def mutate(
@@ -105,7 +120,7 @@ class Layer(Evolver, PyTorch):
 
     def __str__(self) -> str:
         header = f"{self.__class__.__name__} interface"
-        arg_info = []
+        arg_infos = []
         for argname, val in self.args.arg_values.items():
             if argname == "in_channels":
                 continue
@@ -122,11 +137,11 @@ class Layer(Evolver, PyTorch):
                 val = "True" if val else "False"
                 domain = str(domain).replace("(", "{").replace(")", "}")
             # info.append(f"   {argname:<15}: {val:<10} in {domain}")
-            arg_info.append(f"{argname}={val} in {domain}")
-        arg_info = ", ".join(arg_info)
+            arg_infos.append(f"{argname}={val} in {domain}")
+        arg_info = ", ".join(arg_infos)
         arg_info = f"({arg_info})" if arg_info != "" else ""
         io_info = f"{self.input_shape} -> {self.output_shape}"
-        info = f"{header}  {arg_info}\r\n   {io_info}"
+        info = f"{header} {arg_info}\r\n   {io_info}"
         return info
 
     __repr__ = __str__

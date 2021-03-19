@@ -1,4 +1,5 @@
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Union
 
 import numpy as np
@@ -16,6 +17,22 @@ def test_create() -> None:
     ind = get_individual(50)
     print(ind)
     print(ind.torch_model)
+
+
+def test_save() -> None:
+    ind = get_individual(50)
+    tmpdir = TemporaryDirectory()
+    path = Path(tmpdir.name)
+    json = path / f"{ind.uuid}.json"
+    torch = path / f"{ind.uuid}.pt"
+    txt = path / f"{ind.uuid}.txt"
+    try:
+        ind.save(path)
+        assert json.exists()
+        assert torch.exists()
+        assert txt.exists()
+    finally:
+        tmpdir.cleanup()
 
 
 class TestCloning:
@@ -88,10 +105,9 @@ def test_individual(capsys: Any) -> None:
                     print(ind.torch_model)
             raise e
         try:
-            with capsys.disabled():
-                print(ind)
-                ind.evaluate_fitness(fast_dev_run=True)
-                log(ind)
+            print(ind)
+            ind.evaluate_fitness(fast_dev_run=True)
+            log(ind)
         except RuntimeError as e:
             if "Output size is too small" in str(e):
                 vanishings += 1
@@ -110,23 +126,22 @@ def test_individual(capsys: Any) -> None:
             else:
                 raise e
 
-    with capsys.disabled():
-        messages = [f"Number of networks where size shrunk to zero: {vanishings}\r\n"]
-        messages.append("Fitnesses of networks after 1 epoch (accuracies):\r\n")
-        for i, fitness in enumerate(fitnesses):
-            messages.append(f"Model {i}: {str(float(np.round(fitness, 3)))}")
-        for i, (desc, fitness) in enumerate(zip(descs, fitnesses)):
-            messages.append("\r\n\r\n")
-            messages.append("=" * 80)
-            messages.append(f"Model {i}: {str(float(np.round(fitness, 3)))}")
-            messages.append("=" * 80)
-            messages.append(desc)
+    messages = [f"Number of networks where size shrunk to zero: {vanishings}\r\n"]
+    messages.append("Fitnesses of networks after 1 epoch (accuracies):\r\n")
+    for i, fitness in enumerate(fitnesses):
+        messages.append(f"Model {i}: {str(float(np.round(fitness, 3)))}")
+    for i, (desc, fitness) in enumerate(zip(descs, fitnesses)):
+        messages.append("\r\n\r\n")
+        messages.append("=" * 80)
+        messages.append(f"Model {i}: {str(float(np.round(fitness, 3)))}")
+        messages.append("=" * 80)
+        messages.append(desc)
 
-        messages.append("\r\nErrors:")
-        for err in errs:
-            messages.append(err)
+    messages.append("\r\nErrors:")
+    for err in errs:
+        messages.append(err)
 
-        with open(LOGFILE, "w") as logfile:
-            logfile.write("\r\n".join(messages))
-        for message in messages:
-            print(message)
+    with open(LOGFILE, "w") as logfile:
+        logfile.write("\r\n".join(messages))
+    for message in messages:
+        print(message)

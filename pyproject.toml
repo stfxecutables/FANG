@@ -14,6 +14,7 @@ known_local_folder = ['./', 'src', 'test']
 filterwarnings = [
     # note the use of single quote below to denote "raw" strings in TOML
     'ignore:the imp module is deprecated:DeprecationWarning',
+    'ignore::DeprecationWarning',
 ]
 markers = [
     "fast: tests that generally run quickly",
