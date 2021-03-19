@@ -1,6 +1,7 @@
 from src.exceptions import VanishingError
 from src.individual import Individual
 from src.population import Population
+from copy import deepcopy
 
 import numpy as np
 
@@ -23,7 +24,7 @@ def get_individual(attempts: int = 10) -> Individual:
 
 
 def get_pop(n_individuals: int = 10, attempts: int = 10) -> Population:
-    return Population(
+    pop = Population(
         individuals=n_individuals,
         n_nodes=np.random.randint(7, 13),
         task="classification",
@@ -31,3 +32,7 @@ def get_pop(n_individuals: int = 10, attempts: int = 10) -> Population:
         output_shape=10,
         attempts_per_individual=attempts,
     )
+    pop.fitnesses = np.random.uniform(0, 1, n_individuals).tolist()
+    for ind, f in zip(pop, pop.fitnesses):
+        ind.fitness = deepcopy(f)
+    return pop

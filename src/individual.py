@@ -1,15 +1,20 @@
-from __future__ import annotations
-from typing import Dict, List, Optional, Tuple, Union, no_type_check, Type
+from __future__ import annotations  # noqa
+
+import json
+import sys
 from copy import deepcopy
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, no_type_check
+from uuid import uuid1
 
 import numpy as np
 import torch
 from torch import Tensor as TorchTensor
 from torch.nn import Module as TorchModule
 from typing_extensions import Literal
-from src.interface.arguments import ArgMutation
 
-from src.exceptions import VanishingError
+from src.exceptions import ShapingError, VanishingError
+from src.interface.arguments import ArgMutation
 from src.interface.initializer import Framework
 from src.interface.layer import Layer
 from src.interface.pytorch.lightning.train import train_sequential
@@ -61,15 +66,43 @@ class IndividualModel(TorchModule):
         self.interfaces = interfaces
         # ModuleList is needed to ensure parameters can be found
         self.layers = torch.nn.ModuleList(layers)
+        self.sanity_checked: bool = False
 
     @no_type_check
     def forward(self, x: TorchTensor) -> TorchTensor:
+        if not self.sanity_checked:
+            for layer, interface in zip(self.layers, self.interfaces):
+                input_shape = tuple(x.shape[1:])
+                if x.shape[2:] != interface.input_shape[1:]:
+                    name = interface.__class__.__name__
+                    raise ShapingError(
+                        f"{name} interface input_shape is out of sync with Torch actual shape:\n"
+                        f"    {name}.input_shape:   {interface.input_shape}\n"
+                        f"    {name}.output_shape:  {interface.output_shape}\n"
+                        f"    Torch input Tensor x.shape: {input_shape}\n"
+                        f"in IndividualModel:\n"
+                        f"{self}\n"
+                        "with interfaces:\n"
+                        f"{self.interface_str()}\n"
+                    )
+                x = layer(x)
+                if x.shape[2:] != interface.output_shape[1:]:
+                    name = interface.__class__.__name__
+                    raise ShapingError(
+                        f"{name} interface output_shape is out of sync with Torch actual shape:\n"
+                        f"    {name}.input_shape:   {interface.input_shape}\n"
+                        f"    {name}.output_shape:  {interface.output_shape}\n"
+                        f"    Torch input Tensor x.shape: {input_shape}\n"
+                        f"    Torch output Tensor x.shape: {tuple(x.shape[1:])}\n"
+                        f"in IndividualModel:\n"
+                        f"{self}\n"
+                        "with interfaces:\n"
+                        f"{self.interface_str()}\n"
+                    )
+            self.sanity_checked
+            return x
         for layer, interface in zip(self.layers, self.interfaces):
             x = layer(x)
-            if x.shape[2:] != interface.output_shape[1:]:
-                raise RuntimeError(
-                    f"Interface {interface} shape is out of sync with actual shape {x.shape}"
-                )
         return x
 
     def clone(self) -> IndividualModel:
@@ -77,6 +110,9 @@ class IndividualModel(TorchModule):
         interfaces = [interface.clone() for interface in self.interfaces]
         cloned = IndividualModel(layers, interfaces)
         return cloned
+
+    def interface_str(self) -> str:
+        return "\n".join([str(interface) for interface in self.interfaces])
 
     def __str__(self) -> str:
         info = []
@@ -179,6 +215,7 @@ class Individual:
         self.optimizer: TorchOptimizer = np.random.choice(TORCH_OPTIMIZERS)()
 
         self.fitness: Optional[float] = None
+        self.uuid: str = str(uuid1())
 
     def __copy__(self) -> str:
         # NOTE: DO NOT MODIFY THIS FUNCTION
@@ -226,7 +263,7 @@ class Individual:
         # + 1 for input node
         layers: List[Type[Layer]] = np.random.choice(
             TORCH_NODES_2D, size=self.n_nodes + 1, replace=True
-        )
+        ).tolist()
         prev: Layer = layers[0]
 
         # loop over the random selection of layers and make sure input and output shapes align
@@ -244,6 +281,17 @@ class Individual:
             if realized_layers[i] is None:
                 raise RuntimeError(f"Invalid `None` in realized_layers[{i}]: {realized_layers}")
         return realized_layers
+
+    def fix_input_output(self) -> None:
+        prev: Layer = self.layers[0]
+        for i, layer in enumerate(self.layers):
+            self.layers[i] = layer.__class__(
+                input_shape=prev.output_shape if i != 0 else self.input_shape
+            )
+            for size in self.layers[i].output_shape[1:]:
+                if size <= 0:
+                    raise VanishingError("Convolutional layers have reduced output to zero size.")
+            prev = self.layers[i]
 
     def create_output_layer(self, layers: List[Layer]) -> ClassificationOutput:
         if self.task == "classification":
@@ -268,6 +316,8 @@ class Individual:
         into a torch Module"""
         # create torch instances
         for layer in self.layers:
+            if not isinstance(layer, Layer):
+                raise ValueError(f"Someone fucked up. {layer} is not a Layer.")
             layer.create()
         self.output_layer.create()
 
@@ -285,31 +335,44 @@ class Individual:
         self, clone_fitness: bool = True, sequential: Literal["clone", "create"] = None
     ) -> Individual:
         clone: Individual = self.__class__.__new__(self.__class__)
-        clone.n_nodes = self.n_nodes
-        clone.task = self.task
-        clone.input_shape = self.input_shape
-        clone.output_shape = self.output_shape
-        clone.is_sequential = self.is_sequential
-        clone.activation_interval = self.activation_interval
-        clone.framework = self.framework
+        for prop, value in self.__dict__.items():
+            if prop in ["layers", "output_layer", "torch_model", "fitness"]:
+                setattr(clone, prop, None)
+            else:
+                setattr(clone, prop, value)
 
         clone.layers = [layer.clone() for layer in self.layers]
-        for layer in clone.layers:
-            layer.create()
+        clone.optimizer = self.optimizer.clone()
         clone.output_layer = self.output_layer.clone()
+        # unfortunately, python deepcopy does not work with floats, because if you write e.g.
+        #
+        #                   x = 1.0; y = deepcopy(x)
+        #                   print(x is y)
+        #
+        # you see "True". This is trash behaviour, and in general the behaviour of `deepcopy`
+        # for floats is not what anyone really wants. Even:
+        #
+        #                   x = 1.0; y = float(x)
+        #                   print(x is y)
+        #
+        # still results in a `True`. So we force a new float with multiplication by 1.0...
+        if self.fitness is not None:
+            # eps = sys.float_info.epsilon
+            # f = float(self.fitness) + eps - eps
+            f = float(self.fitness) * 1.0  # force a copy...
+            clone.fitness = f if clone_fitness else None
         if sequential == "clone":
             raise NotImplementedError("Cloning nn.Module is not implemented yet")
             # clone.sequential_model = self.sequential_model.clone()
         elif sequential == "create":
+            for layer in clone.layers:
+                layer.create()
             clone.torch_model = clone.realize_model()
+            return clone
         elif sequential is None:
-            pass
+            return clone
         else:
             raise ValueError("Valid options for `sequential` are 'clone', 'create' or `None`.")
-
-        clone.optimizer = self.optimizer.clone()
-        clone.fitness = self.fitness if clone_fitness else None
-        return clone
 
     def mutate(
         self,
@@ -319,7 +382,24 @@ class Individual:
         swap_layers: bool = False,
         delete_layers: bool = False,
         optimizer: bool = False,
-    ) -> Individual:
+    ) -> Optional[Individual]:
+        args = dict(
+            prob=0.1,
+            method="random",
+            add_layers=False,
+            swap_layers=False,
+            delete_layers=False,
+            optimizer=False,
+        )
+
+        # NOTE: Dangerous! Could blow stack maybe if very unlucky.
+        def try_fix(self: Any, mutated: Individual, args: Dict) -> Individual:
+            try:
+                return mutated.fix_input_output()  # type: ignore
+            except VanishingError:
+                print("Cannot resolve input/output sizes. Generating new mutation.")
+                return self.mutate(**args)  # type: ignore
+
         mutated = self.mutate_parameters(prob)
         if add_layers:
             mutated = mutated.mutate_new_layer(prob)
@@ -329,6 +409,7 @@ class Individual:
             mutated = mutated.mutate_delete_layer(prob)
         if optimizer:
             mutated.optimizer = mutated.optimizer.mutate(prob, method)
+        mutated = try_fix(self, mutated, args)  # mutate again if unfixable
         mutated.output_layer = mutated.create_output_layer(mutated.layers)
         mutated.torch_model = mutated.realize_model()
         return mutated
@@ -371,7 +452,17 @@ class Individual:
         mutated: Individual
             The mutated individual
         """
-        raise NotImplementedError()
+
+        # get length of layers to get a random insertion point range
+        n_layers = len(self.layers)
+        position = np.random.randint(low=1, high=n_layers)
+        prev = self.layers[position - 1]
+        mutated = self.clone(clone_fitness=False, sequential=None)
+        layer_constructor: Layer = np.random.choice(TORCH_NODES_2D, size=1)[0]
+        layer = layer_constructor(input_shape=prev.output_shape)
+        # next layer may now be in an inconsistent state, must be fixed later!
+        mutated.layers.insert(position, layer)
+        return mutated
 
     def mutate_delete_layer(self, prob: float = 0.1) -> Individual:
         """Delete a middle layer with probability `prob`, fixing input/output sizes of the layers
@@ -388,7 +479,10 @@ class Individual:
         mutated: Individual
             The mutated individual
         """
-        raise NotImplementedError()
+        deletion_point = np.random.randint(low=1, high=len(self.layers))
+        mutated = self.clone(clone_fitness=False, sequential=None)
+        mutated.layers.pop(deletion_point)
+        return mutated
 
     def mutate_swap_layer(self, prob: float = 0.1) -> Individual:
         """Swap the positions of  a middle layer with probability `prob`, fixing input/output sizes
@@ -404,5 +498,36 @@ class Individual:
         mutated: Individual
             The mutated individual
         """
-        raise NotImplementedError()
+        # pick random layers (except for first/input layer) and swap them
+        idx1, idx2 = np.random.choice(range(1, len(self.layers)), 2).tolist()
+        mutated = self.clone(clone_fitness=False, sequential=None)
+        mutated.layers[idx1], mutated.layers[idx2] = mutated.layers[idx2], mutated.layers[idx1]
+        return mutated
 
+    def as_dict(self) -> Dict[str, Any]:
+        serializable: Dict[str, Any] = {"Individual": {}}
+        for attr in self.__dict__.keys():
+            if attr in ["torch_model", "optimizer"]:  # need to be saved with torch.save
+                continue
+            elif attr in ["output_layer"]:  # to to call as_dict()
+                serializable["Individual"][attr] = getattr(self, attr).as_dict()
+            elif attr in ["layers"]:  # to to call as_dict()
+                layers = getattr(self, attr)
+                layer_dicts = [layer.as_dict() for layer in layers]
+                serializable["Individual"][attr] = layer_dicts
+            else:
+                serializable["Individual"][attr] = getattr(self, attr)
+        return serializable
+
+    def save(self, dir: Path) -> None:
+        if not Path(dir).is_dir():
+            raise ValueError("`dir` must be a directory.")
+        jsonfile = dir / f"{self.uuid}.json"
+        torchfile = dir / f"{self.uuid}.pt"
+        txtfile = dir / f"{self.uuid}.txt"
+        with open(jsonfile, "w") as file:
+            json.dump(self.as_dict(), file, check_circular=True, indent=2, sort_keys=True)
+        with open(txtfile, "w") as file:
+            file.write(str(self))
+            file.write("\n")
+        torch.save(self.torch_model, str(torchfile))

@@ -45,7 +45,7 @@ class Conv(ReshapingLayer):
     MAX_OUT_CHANNELS = 512
     MAX_PAD = 5  # TODO: tie to kernel_size, string, padding, and dilation instead
     MAX_DILATE = 5
-    MAX_KERNEL = 7
+    MAX_KERNEL = 5
     MAX_STRIDE = 2
     PADDING_MODES = ("zeros", "reflect", "replicate", "circular")
 
@@ -62,6 +62,29 @@ class Conv(ReshapingLayer):
         # "bias": ("bool", None),
         # "groups": ("int", (1, 12)),
     }
+
+    def __init__(self, input_shape: Tuple[int, ...], **layer_kwargs: Any):
+        self.torch: Optional[Module] = None
+        self.input_shape = input_shape
+        self.in_channels = input_shape[0]
+
+        # by default, `out_channels` is random initially
+        channel_argvals = {"in_channels": input_shape[0]}
+        # order below is IMPORTANT, want to update OUT with ARGS
+        self.args = Arguments({**self.OUT, **self.ARGS})
+        self.args.arg_values.update(channel_argvals)
+
+        # Handle bad padding sizes given a kernel size:
+        # pad should be smaller than half of kernel size, but got padW = 2, padH = 2, kW = 1, kH = 1
+        P, K = self.args.arg_values["padding"], self.args.arg_values["kernel_size"]
+        max_pad = K // 2
+        if max_pad == 0:
+            self.args.arg_values["padding"] = 0
+        elif P >= max_pad:
+            self.args.arg_values["padding"] = int(np.random.randint(0, max_pad))
+
+        self.out_channels = self.args.arg_values["out_channels"]
+        self.output_shape = self._output_shape()
 
     def _output_shape(self) -> Tuple[int, ...]:
         # NOTE: currently assumes padding, kernels, dilation are all symmetric (e.g. `(n,n)`)

@@ -1,30 +1,14 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa
+
 from enum import Enum
+from pathlib import Path
+from typing import Optional, Tuple, Type, Union, no_type_check
 
 from src.hall_of_fame import HallOfFame
-from src.interface.arguments import ArgMutation
-from src.interface.pytorch.optimizer import Optimizer
-from src.individual import Individual
-from src.population import Population
-from src.interface.evolver import Evolver
 from src.individual import Individual, Task
-from src.interface.evolver import Evolver
+from src.interface.arguments import ArgMutation
 from src.interface.initializer import Framework
-from src.exceptions import VanishingError
-
-from typing import Any, Dict, List, Optional, Tuple, Union, Type
-from typing import cast, no_type_check
-from typing_extensions import Literal
-
-from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sbn
-from numpy import ndarray
-from pandas import DataFrame, Series
+from src.population import Population
 
 
 class State(Enum):
@@ -159,7 +143,7 @@ class Generation:
         task: Task = None,
         input_shape: Union[int, Tuple[int, ...]] = None,
         output_shape: Union[int, Tuple[int, ...]] = None,
-        survival_threshold: float = 0.5,
+        survival_threshold: float = 0.0,
         mutation_probability: float = 0.1,
         crossover: bool = False,
         mutation_method: ArgMutation = "random",
@@ -225,7 +209,7 @@ class Generation:
     def from_population(
         cls: Type[Generation],
         population: Population,
-        survival_threshold: float = 0.1,
+        survival_threshold: float = 0.0,
         mutation_probability: float = 0.1,
         crossover: bool = False,
         mutation_method: ArgMutation = "random",
@@ -242,7 +226,7 @@ class Generation:
     ) -> Generation:
         self: Generation = cls.__new__(cls)
 
-        self.survival_threshold = float(survival_threshold)
+        self.survival_threshold = float(survival_threshold) if not fast_dev_run else 0.0
         self.do_crossover = crossover
 
         self.mutation_prob = mutation_probability
@@ -261,6 +245,7 @@ class Generation:
         self.offspring = None
 
         self.state = State.INITIALIZED
+        self.size = len(population)
         self.progenitors = population
         self.input_shape = population.input_shape
         self.output_shape = population.output_shape
@@ -272,9 +257,10 @@ class Generation:
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
         self.fast_dev_run = fast_dev_run
-        population.fast_dev_run = self.fast_dev_run  # ensure we override this
+        # self.fast_dev_run = population.fast_dev_run  # ensure we override this
         return self
 
+    @no_type_check
     def __str__(self) -> str:
         info = f"Generation (stage={self.state})."
         if self.state == State.INITIALIZED:
@@ -284,7 +270,7 @@ class Generation:
         elif self.state == State.SURVIVED:
             return (
                 f"{info} {len(self.survivors)} survivors for threshold={self.survival_threshold}."
-            )  # type: ignore # noqa
+            )
         elif self.state == State.SAVED:
             return (
                 f"{info} {len(self.survivors)} survivors, {len(self.hall)} in Hall of Fame."
@@ -332,6 +318,7 @@ class Generation:
             activation_interval=self.activation_interval,
             attempts_per_individual=self.attempts_per_individual,
             attempts_per_generation=self.attempts_per_generation,
+            fast_dev_run=self.fast_dev_run,
         )
         next_gen.hall = self.hall
         return next_gen
@@ -344,7 +331,7 @@ class Generation:
     def get_survivors(self) -> None:
         assert self.state == State.EVALUATED
         self.survivors = self.filter_by_fitness()
-        if len(self.survivors < 2):
+        if len(self.survivors) < 2:
             if self.attempts < self.attempts_per_generation:
                 print("Not enough surviving individuals to reproduce. Creating new progenitors...")
                 self.state = State.INITIALIZED
@@ -358,6 +345,7 @@ class Generation:
                     activation_interval=self.activation_interval,
                     framework=self.framework,
                     attempts_per_individual=self.attempts_per_individual,
+                    fast_dev_run=self.fast_dev_run,
                 )
                 self.attempts += 1
                 self.evaluate_fitnesses()
@@ -382,11 +370,9 @@ class Generation:
         self.state = State.SAVED
 
     def mutate_survivors(self) -> None:
-        assert self.state == State.SURVIVED
+        assert self.state == State.SAVED
         assert self.survivors is not None
 
-        individual: Individual
-        self.mutated = []
         mutation_options = dict(
             prob=self.mutation_prob,
             method=self.mutation_method,
@@ -395,14 +381,18 @@ class Generation:
             delete_layers=self.delete_layers,
             optimizer=self.mutate_optimizer,
         )
-        for individual in self.survivors:
-            self.mutated.append(individual.mutate(**mutation_options))
+        # for individual in self.survivors:
+        #     mutated.append(individual.mutate(**mutation_options))
+        # self.mutated = Population(mutated, fast_dev_run=self.fast_dev_run)
+        self.mutated = self.survivors.mutate(**mutation_options)
+        self.mutated.fast_dev_run = self.fast_dev_run
         self.state = State.MUTATED
 
     def cross(self) -> None:
         assert self.state == State.MUTATED
         """From mutated survivors, get crossover pairs and perform crossover"""
         self.crossed = self.mutated.crossover()  # type: ignore
+        self.crossed.fast_dev_run = self.fast_dev_run
         self.state = State.CROSSED
 
     def set_offspring(self) -> None:
@@ -419,4 +409,7 @@ class Generation:
     def filter_by_fitness(self) -> Population:
         """Get a population of individuals from self.progenitors that all have fitness above
         `self.survival_threshold`. Must return *references*, and not copies."""
-        raise NotImplementedError()
+        survivors = list(
+            filter(lambda ind: ind.fitness >= self.survival_threshold, self.progenitors)
+        )
+        return Population(survivors, fast_dev_run=self.fast_dev_run)

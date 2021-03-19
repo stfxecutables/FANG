@@ -10,12 +10,19 @@ from src.interface.layer import ReshapingLayer
 
 
 class Padding(ReshapingLayer):
-    """This class should abstract over the similar components of the Padding layers"""
+    """This class should abstract over the similar components of the Padding layers
+
+    Note
+    ----
+    We need to keep all image sizes *even* for pooling layers. This means padding must be odd if
+    input is odd, and even if input is even.
+
+    """
 
     MAX_PAD = 5
 
     ARGS = {
-        "padding": ("int", (0, MAX_PAD)),
+        "padding": ("int", (1, MAX_PAD)),
         # "padding_tuple": ("tuple", ((0,MAX_PAD), (0,MAX_PAD), (0,MAX_PAD), (0,MAX_PAD))),
     }
 
@@ -30,7 +37,11 @@ class Padding(ReshapingLayer):
         # order below is IMPORTANT, want to update OUT with ARGS
         self.args = Arguments({**self.OUT, **self.ARGS})
         self.args.arg_values.update(channel_argvals)
-
+        # we need to adjust random padding in case when image size is small, or get:
+        # RuntimeError: Padding size should be less than the corresponding input dimension
+        max_pad = min(input_shape[1:]) - 1
+        current_pad = self.args.arg_values["padding"]
+        self.args.arg_values["padding"] = min(max_pad, current_pad)
         self.out_channels = self.args.arg_values["out_channels"]
         self.output_shape = self._output_shape()
 
@@ -41,7 +52,7 @@ class Padding(ReshapingLayer):
         C_out = self.out_channels
         H_out = int(H + 2 * P)
         W_out = int(W + 2 * P)
-        return (C_out, H_out, W_out)
+        return C_out, H_out, W_out
 
 
 class ZeroPadding(Padding, PyTorch):

@@ -1,7 +1,7 @@
 from __future__ import annotations  # noqa
 
 from copy import deepcopy
-from typing import List, Optional, Tuple, Union, cast, no_type_check
+from typing import Any, Dict, List, Optional, Tuple, Union, cast, no_type_check
 
 import numpy as np
 import torch as t
@@ -55,7 +55,11 @@ class GlobalAveragePooling(Module):
         return t.mean(x, dim=self._runtime_channel_dim, keepdim=True)
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}(input_shape={str(self._input_shape)}, reducing_dim={self._runtime_channel_dim})"
+        return (
+            f"{self.__class__.__name__}"
+            f"(input_shape={str(self._input_shape)}, "
+            f"reducing_dim={self._runtime_channel_dim})"
+        )
 
     __repr__ = __str__
 
@@ -88,6 +92,18 @@ class FinalLinear2d(Module):
     def forward(self, x: Tensor) -> Tensor:
         x = self.flatten(x)
         x = self.linear(x)
+        return x
+
+
+class Output(Module):
+    def __init__(self, layers: List[Module]) -> None:
+        super().__init__()
+        self.layers = ModuleList(layers)
+
+    @no_type_check
+    def forward(self, x: Tensor) -> Tensor:
+        for layer in self.layers:
+            x = layer(x)
         return x
 
 
@@ -165,19 +181,7 @@ class ClassificationOutput(PyTorch):
     def create(self) -> None:
         """Build the Torch Module depending on the options"""
         layers = self.__build_layers()
-
-        class Output(Module):
-            def __init__(self) -> None:
-                super().__init__()
-                self.layers = ModuleList(layers)
-
-            @no_type_check
-            def forward(self, x: Tensor) -> Tensor:
-                for layer in self.layers:
-                    x = layer(x)
-                return x
-
-        self.torch = cast(Module, Output())
+        self.torch = cast(Module, Output(layers))
 
     def clone(self) -> ClassificationOutput:
         cloned = ClassificationOutput(**self.constructor_args)  # type: ignore
@@ -232,7 +236,7 @@ class ClassificationOutput(PyTorch):
         """
         if reduction == "channels":
             pooling: Module = GlobalAveragePooling(input_shape=input_shape)
-            return pooling, pooling._output_shape
+            return pooling, pooling._output_shape  # type: ignore
         elif reduction == "pooling":
             pooling = MaxPool2d(2, 2)
             spatial = (input_shape[1], input_shape[2])
@@ -253,12 +257,25 @@ class ClassificationOutput(PyTorch):
         else:
             raise ValueError("Invalid reduction option.")
 
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "ClassificationOutput": {
+                "created": self.torch is not None,
+                "input_shape": self.input_shape,
+                "in_channels": self.in_channels,
+                "output_shape": self.output_shape,
+                "out_channels": self.out_channels,
+                "reductions": self.reductions,
+                "constructor_args": self.constructor_args,
+            }
+        }
+
     def __str__(self) -> str:
         header = f"{self.__class__.__name__} interface"
-        arg_info = []
+        arg_infos = []
         for argname, val in self.constructor_args.items():
-            arg_info.append(f"{argname}={val}")
-        arg_info = ", ".join(arg_info)
+            arg_infos.append(f"{argname}={val}")
+        arg_info = ", ".join(arg_infos)
         arg_info = f"({arg_info})" if arg_info != "" else ""
         io_info = f"{self.input_shape} -> {self.output_shape}"
         info = f"{header}  {arg_info}\r\n   {io_info}"

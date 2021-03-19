@@ -50,4 +50,3 @@ class TestMutation:
                 ind = get_individual(50)
                 mutated = ind.mutate(prob=0.5, method="random", **args)
                 assert ind != mutated
-

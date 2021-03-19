@@ -1,4 +1,7 @@
+from json import dumps
+
 import pytest
+import torch
 
 from src.interface.layer import Layer
 from src.interface.pytorch.nodes.activations import (
@@ -14,23 +17,42 @@ from src.interface.pytorch.nodes.conv import Conv2d, UpConv2d
 from src.interface.pytorch.nodes.drop import Dropout, Dropout2d
 from src.interface.pytorch.nodes.linear import Linear
 from src.interface.pytorch.nodes.norm import BatchNorm2d, InstanceNorm2d, LayerNorm
+from src.interface.pytorch.nodes.pad import ReflectionPadding, ReplicationPadding, ZeroPadding
 from src.interface.pytorch.nodes.pool import AveragePool2d, MaxPool2d
-from src.interface.pytorch.nodes.pad import ZeroPadding, ReplicationPadding, ReflectionPadding
 
 P = 0.33
 
+REPEATS = 100  # imperfect, but samples large number of param configs
+
 
 def use_layer_methods(layer: Layer) -> None:
-    instance = layer(input_shape=(1, 128, 128))
-    print("")
-    print(instance)
-    print(instance.torch)
-    instance.create()
-    assert instance.torch is not None
-    print("Clone:")
-    print(instance.clone())
-    print("Mutated:")
-    print(instance.mutate(P))
+    for _ in range(REPEATS):
+        is_linear = layer.__name__ == "Linear"
+        input_shape = [1, 1, 28, 28] if not is_linear else [1, 28]
+        instance = layer(input_shape=tuple(input_shape[1:]))  # no batch size for interfaces
+        print("")
+        print(instance)
+        print(instance.torch)
+        instance.create()
+        assert instance.torch is not None
+        x = torch.rand(input_shape)
+        out = instance.torch(x)
+        assert tuple(out.shape[1:]) == tuple(instance.output_shape)
+        print("Clone:")
+        print(instance.clone())
+        print("Mutated:")
+        print(instance.mutate(P))
+        d = instance.as_dict()
+        dumps(d)  # make sure it is json-able
+        # extra test for padding layers
+        if ("Pad" in layer.__name__) or ("pool" in layer.__name__.lower()):
+            for size in range(2, 32):  # assume pooling can only halve image size
+                shape = (1, 1, size, size)
+                instance = layer(input_shape=tuple(shape[1:]))
+                instance.create()
+                x = torch.rand(shape)
+                out = instance.torch(x)
+                assert tuple(out.shape[1:]) == tuple(instance.output_shape)
 
 
 @pytest.mark.spec
