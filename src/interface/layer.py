@@ -141,7 +141,7 @@ class Layer(Evolver, PyTorch):
         arg_info = ", ".join(arg_infos)
         arg_info = f"({arg_info})" if arg_info != "" else ""
         io_info = f"{self.input_shape} -> {self.output_shape}"
-        info = f"{header}  {arg_info}\r\n   {io_info}"
+        info = f"{header} {arg_info}\r\n   {io_info}"
         return info
 
     __repr__ = __str__
