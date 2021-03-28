@@ -331,6 +331,7 @@ class Generation:
     def get_survivors(self) -> None:
         assert self.state == State.EVALUATED
         self.survivors = self.filter_by_fitness()
+        print(self.survivors)
         if len(self.survivors) < 2:
             if self.attempts < self.attempts_per_generation:
                 print("Not enough surviving individuals to reproduce. Creating new progenitors...")
@@ -350,8 +351,35 @@ class Generation:
                 self.attempts += 1
                 self.evaluate_fitnesses()
                 self.get_survivors()
+
             else:
                 raise RuntimeError("Maximum generation attempts reached. No surviors")
+        else:
+            list1 = [ind for ind in self.survivors]
+            # print("list1", list1)
+            while len(list1) < self.size:
+                self.state = State.INITIALIZED
+                progenitors1 = Population(
+                    individuals=self.size - len(list1),
+                    n_nodes=self.n_nodes,
+                    task=self.task,
+                    input_shape=self.input_shape,
+                    output_shape=self.output_shape,
+                    sequential=self.is_sequential,
+                    activation_interval=self.activation_interval,
+                    framework=self.framework,
+                    attempts_per_individual=self.attempts_per_individual,
+                    fast_dev_run=self.fast_dev_run,
+                )
+                progenitors1.evaluate_fitnesses()
+                new_survivor = [
+                    ind for ind in progenitors1 if ind.fitness >= self.survival_threshold
+                ]
+                for ind in new_survivor:
+                    list1.append(ind)
+
+            self.survivors = Population(list1, fast_dev_run=self.fast_dev_run)
+
         self.state = State.SURVIVED
 
     def save_progress(self, survivor_dir: Path = None) -> None:
