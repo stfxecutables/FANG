@@ -355,12 +355,11 @@ class Generation:
             else:
                 raise RuntimeError("Maximum generation attempts reached. No surviors")
         else:
-            list1 = [ind for ind in self.survivors]
-            # print("list1", list1)
-            while len(list1) < self.size:
+            new_individuals = [ind for ind in self.survivors]
+            while len(new_individuals) < self.size:
                 self.state = State.INITIALIZED
-                progenitors1 = Population(
-                    individuals=self.size - len(list1),
+                new_progenitors = Population(
+                    individuals=self.size - len(new_individuals),
                     n_nodes=self.n_nodes,
                     task=self.task,
                     input_shape=self.input_shape,
@@ -371,14 +370,14 @@ class Generation:
                     attempts_per_individual=self.attempts_per_individual,
                     fast_dev_run=self.fast_dev_run,
                 )
-                progenitors1.evaluate_fitnesses()
+                new_progenitors.evaluate_fitnesses()
                 new_survivor = [
-                    ind for ind in progenitors1 if ind.fitness >= self.survival_threshold
+                    ind for ind in new_progenitors if ind.fitness >= self.survival_threshold
                 ]
                 for ind in new_survivor:
-                    list1.append(ind)
+                    new_individuals.append(ind)
 
-            self.survivors = Population(list1, fast_dev_run=self.fast_dev_run)
+            self.survivors = Population(new_individuals, fast_dev_run=self.fast_dev_run)
 
         self.state = State.SURVIVED
 
