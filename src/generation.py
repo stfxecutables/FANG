@@ -77,12 +77,15 @@ class Generation:
         If False, first generate a sequential network, and then add random skip connections between
         some nodes. [Currently not implemented].
 
-    activation_interval: int = 0
-        If greater than zero, require a non-linear activation to be placed after
-        `activation_interval` non-activation layers. E.g. if `activation_interval=2`, there can be
-        at maximum two consecutive non-activation layers before a random activation layer is
-        forcefully inserted. We may wish to require semi-regular activations because e.g. two Conv
-        layers just compose to a single linear function, which is an inefficiency.
+    min_activation_spacing: int = 1
+        Sets the minimum number of layers between activations when generating random individuals.
+        E.g. if greater than zero, require `activation_spacing` non-activation layers to be included
+        before adding an activation layer. Not recommended to set larger than 3. Helpful to prevent
+        long chains of nothing but un-trainable activation functions.
+
+    max_activation_spacing: int = 3
+        Forces an activation function to be inserted after `max_activation_spacing` non-activation
+        layers have been randomly selected when creatings a new random individual.
 
     framework: "pytorch" | "Tensorflow"
         Which framework to use for instantiating and training the models.
@@ -126,15 +129,16 @@ class Generation:
 
     Notes
     -----
-    There are six stages for a generation. We can think of this as a very simple finite state
+    There are seven stages for a generation. We can think of this as a very simple finite state
     machine:
 
         1. initialized <--
         2. evaluated      |
         3. survived       |
-        4. mutated        |
-        5. crossed        |
-        6. reproduced  -->
+        4. repopulated    |
+        5. mutated        |
+        6. crossed        |
+        7. reproduced  -->
     """
 
     def __init__(
@@ -155,7 +159,8 @@ class Generation:
         hall_size: int = 10,
         hall_dir: Path = None,
         sequential: bool = True,
-        activation_interval: int = 0,
+        min_activation_spacing: int = 1,
+        max_activation_spacing: int = 3,
         framework: Framework = "pytorch",
         attempts_per_individual: int = 3,
         attempts_per_generation: int = 1,
@@ -187,7 +192,8 @@ class Generation:
         self.task: Task = task
         self.is_sequential: bool = sequential
         self.framework: Framework = framework
-        self.activation_interval = activation_interval
+        self.min_activation_spacing: int = min_activation_spacing
+        self.max_activation_spacing: int = max_activation_spacing
         self.attempts_per_individual = attempts_per_individual
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
@@ -200,7 +206,8 @@ class Generation:
             input_shape=self.input_shape,
             output_shape=self.output_shape,
             sequential=self.is_sequential,
-            activation_interval=self.activation_interval,
+            min_activation_spacing=self.min_activation_spacing,
+            max_activation_spacing=self.max_activation_spacing,
             framework=self.framework,
             attempts_per_individual=self.attempts_per_individual,
             fast_dev_run=self.fast_dev_run,
@@ -220,7 +227,8 @@ class Generation:
         mutate_optimizer: bool = False,
         hall_size: int = 10,
         hall_dir: Path = None,
-        activation_interval: int = 0,
+        min_activation_spacing: int = 1,
+        max_activation_spacing: int = 3,
         attempts_per_individual: int = 10,
         attempts_per_generation: int = 5,
         fast_dev_run: bool = False,
@@ -253,7 +261,8 @@ class Generation:
         self.task = population.task
         self.is_sequential = population.is_sequential
         self.framework = population.framework
-        self.activation_interval = activation_interval
+        self.min_activation_spacing = min_activation_spacing
+        self.max_activation_spacing = max_activation_spacing
         self.attempts_per_individual = attempts_per_individual
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
@@ -317,7 +326,8 @@ class Generation:
             mutate_optimizer=self.mutate_optimizer,
             hall_size=self.hall_size,
             hall_dir=self.hall_dir,
-            activation_interval=self.activation_interval,
+            min_activation_spacing=self.min_activation_spacing,
+            max_activation_spacing=self.max_activation_spacing,
             attempts_per_individual=self.attempts_per_individual,
             attempts_per_generation=self.attempts_per_generation,
             fast_dev_run=self.fast_dev_run,
@@ -346,7 +356,7 @@ class Generation:
                     att = self.attempts_per_generation
                     raise RuntimeError(
                         f"Exceeded maximum attempts ({att}) to generate a viable population.\n"
-                        f"Consider increasing `attempts_per_generation` or `attempts_per_individual`,\n"
+                        f"Consider increasing `attempts_per_generation` or `attempts_per_individual`,\n"  # noqa: E501
                         f"or changing options related to activation function frequency."
                     )
                 print(f"Repopulation attempt {self.attempts}:")
@@ -429,7 +439,8 @@ class Generation:
             input_shape=self.input_shape,
             output_shape=self.output_shape,
             sequential=self.is_sequential,
-            activation_interval=self.activation_interval,
+            min_activation_spacing=self.min_activation_spacing,
+            max_activation_spacing=self.max_activation_spacing,
             framework=self.framework,
             attempts_per_individual=self.attempts_per_individual,
             fast_dev_run=self.fast_dev_run,
