@@ -52,6 +52,20 @@ class TestGeneration:
         assert gen.state == State.SURVIVED
         assert len(gen.survivors) == 5
 
+    def test_repopulate(self, capsys: Any) -> None:
+        gen = get_gen(10)
+        gen.survival_threshold = 0.2
+        for i, ind in enumerate(gen.progenitors):
+            if i < 7:
+                ind.fitness = np.random.uniform(0.8, 1)
+            else:
+                ind.fitness = 0.0
+        gen.progenitors.fitnesses = [ind.fitness for ind in gen.progenitors]
+        gen.state = State.EVALUATED
+        gen.get_survivors()
+        gen.repopulate()
+        assert len(gen.survivors) == gen.size
+
     def test_mutate_survivors(self, capsys: Any) -> None:
         gen = get_gen(2)
         for ind in gen.progenitors:
@@ -73,7 +87,6 @@ class TestGeneration:
         assert gen.state == State.CROSSED
 
 
-
 def test_next(capsys: Any, full_run: bool, generations: int, mutation_prob: float) -> None:
     gen = get_gen(
         10,
@@ -81,6 +94,7 @@ def test_next(capsys: Any, full_run: bool, generations: int, mutation_prob: floa
         add_layers=True,
         swap_layers=True,
         delete_layers=True,
+        survival_threshold=0.2 if not full_run else 0.7,
         mutation_probability=mutation_prob,
         # 10, fast_dev_run=not full_run, add_layers=True
     )
