@@ -164,12 +164,15 @@ class Individual:
         If False, first generate a sequential network, and then add random skip connections between
         some nodes. [Currently not implemented].
 
-    activation_interval: int = 0
-        If greater than zero, require a non-linear activation to be placed after
-        `activation_interval` non-activation layers. E.g. if `activation_interval=2`, there can be
-        at maximum two consecutive non-activation layers before a random activation layer is
-        forcefully inserted. We may wish to require semi-regular activations because e.g. two Conv
-        layers just compose to a single linear function, which is an inefficiency.
+    min_activation_spacing: int = 1
+        Sets the minimum number of layers between activations when generating random individuals.
+        E.g. if greater than zero, require `activation_spacing` non-activation layers to be included
+        before adding an activation layer. Not recommended to set larger than 3. Helpful to prevent
+        long chains of nothing but un-trainable activation functions.
+
+    max_activation_spacing: int = 3
+        Forces an activation function to be inserted after `max_activation_spacing` non-activation
+        layers have been randomly selected when creatings a new random individual.
 
     framework: "pytorch" | "Tensorflow"
         Which framework to use for instantiating and training the models.
@@ -186,7 +189,8 @@ class Individual:
         input_shape: Union[int, Tuple[int, ...]],
         output_shape: Union[int, Tuple[int, ...]],
         sequential: bool = True,
-        activation_interval: int = 0,
+        min_activation_spacing: int = 1,
+        max_activation_spacing: int = 3,
         framework: Framework = "pytorch",
     ) -> None:
         if task.lower() != "classification":
@@ -206,7 +210,8 @@ class Individual:
         self.input_shape: Tuple[int, ...] = input_shape
         self.output_shape: Tuple[int, ...] = output_shape
         self.is_sequential: bool = sequential
-        self.activation_interval: int = activation_interval
+        self.min_activation_spacing: int = min_activation_spacing
+        self.max_activation_spacing: int = max_activation_spacing
         self.framework: Framework = framework
 
         self.layers: List[Layer] = self.create_random_nodes()
@@ -260,6 +265,10 @@ class Individual:
         the torch realizations
         """
         realized_layers: List[Layer] = []
+        # TODO: Implement functionality for options:
+        #       * `max_activation_spacing`
+        #       * `min_activation_spacing`
+
         # + 1 for input node
         layers: List[Type[Layer]] = np.random.choice(
             TORCH_NODES_2D, size=self.n_nodes + 1, replace=True

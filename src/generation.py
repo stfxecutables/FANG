@@ -2,7 +2,7 @@ from __future__ import annotations  # noqa
 
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Tuple, Type, Union, no_type_check
+from typing import Any, Dict, Optional, Tuple, Type, Union, no_type_check
 
 from src.hall_of_fame import HallOfFame
 from src.individual import Individual, Task
@@ -15,10 +15,11 @@ class State(Enum):
     INITIALIZED = 0
     EVALUATED = 1
     SURVIVED = 2
-    SAVED = 3
-    MUTATED = 4
-    CROSSED = 5
-    REPRODUCED = 6
+    REPOPULATED = 3
+    SAVED = 4
+    MUTATED = 5
+    CROSSED = 6
+    REPRODUCED = 7
 
 
 class Generation:
@@ -76,12 +77,15 @@ class Generation:
         If False, first generate a sequential network, and then add random skip connections between
         some nodes. [Currently not implemented].
 
-    activation_interval: int = 0
-        If greater than zero, require a non-linear activation to be placed after
-        `activation_interval` non-activation layers. E.g. if `activation_interval=2`, there can be
-        at maximum two consecutive non-activation layers before a random activation layer is
-        forcefully inserted. We may wish to require semi-regular activations because e.g. two Conv
-        layers just compose to a single linear function, which is an inefficiency.
+    min_activation_spacing: int = 1
+        Sets the minimum number of layers between activations when generating random individuals.
+        E.g. if greater than zero, require `activation_spacing` non-activation layers to be included
+        before adding an activation layer. Not recommended to set larger than 3. Helpful to prevent
+        long chains of nothing but un-trainable activation functions.
+
+    max_activation_spacing: int = 3
+        Forces an activation function to be inserted after `max_activation_spacing` non-activation
+        layers have been randomly selected when creatings a new random individual.
 
     framework: "pytorch" | "Tensorflow"
         Which framework to use for instantiating and training the models.
@@ -125,15 +129,16 @@ class Generation:
 
     Notes
     -----
-    There are six stages for a generation. We can think of this as a very simple finite state
+    There are seven stages for a generation. We can think of this as a very simple finite state
     machine:
 
         1. initialized <--
         2. evaluated      |
         3. survived       |
-        4. mutated        |
-        5. crossed        |
-        6. reproduced  -->
+        4. repopulated    |
+        5. mutated        |
+        6. crossed        |
+        7. reproduced  -->
     """
 
     def __init__(
@@ -154,7 +159,8 @@ class Generation:
         hall_size: int = 10,
         hall_dir: Path = None,
         sequential: bool = True,
-        activation_interval: int = 0,
+        min_activation_spacing: int = 1,
+        max_activation_spacing: int = 3,
         framework: Framework = "pytorch",
         attempts_per_individual: int = 3,
         attempts_per_generation: int = 1,
@@ -186,7 +192,8 @@ class Generation:
         self.task: Task = task
         self.is_sequential: bool = sequential
         self.framework: Framework = framework
-        self.activation_interval = activation_interval
+        self.min_activation_spacing: int = min_activation_spacing
+        self.max_activation_spacing: int = max_activation_spacing
         self.attempts_per_individual = attempts_per_individual
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
@@ -199,7 +206,8 @@ class Generation:
             input_shape=self.input_shape,
             output_shape=self.output_shape,
             sequential=self.is_sequential,
-            activation_interval=self.activation_interval,
+            min_activation_spacing=self.min_activation_spacing,
+            max_activation_spacing=self.max_activation_spacing,
             framework=self.framework,
             attempts_per_individual=self.attempts_per_individual,
             fast_dev_run=self.fast_dev_run,
@@ -219,9 +227,10 @@ class Generation:
         mutate_optimizer: bool = False,
         hall_size: int = 10,
         hall_dir: Path = None,
-        activation_interval: int = 0,
-        attempts_per_individual: int = 3,
-        attempts_per_generation: int = 1,
+        min_activation_spacing: int = 1,
+        max_activation_spacing: int = 3,
+        attempts_per_individual: int = 10,
+        attempts_per_generation: int = 5,
         fast_dev_run: bool = False,
     ) -> Generation:
         self: Generation = cls.__new__(cls)
@@ -252,7 +261,8 @@ class Generation:
         self.task = population.task
         self.is_sequential = population.is_sequential
         self.framework = population.framework
-        self.activation_interval = activation_interval
+        self.min_activation_spacing = min_activation_spacing
+        self.max_activation_spacing = max_activation_spacing
         self.attempts_per_individual = attempts_per_individual
         self.attempts_per_generation = attempts_per_generation
         self.attempts = 0
@@ -298,6 +308,7 @@ class Generation:
         """
         self.evaluate_fitnesses()
         self.get_survivors()
+        self.repopulate()
         self.save_progress(survivor_dir)
         self.mutate_survivors()
         if self.do_crossover:
@@ -315,7 +326,8 @@ class Generation:
             mutate_optimizer=self.mutate_optimizer,
             hall_size=self.hall_size,
             hall_dir=self.hall_dir,
-            activation_interval=self.activation_interval,
+            min_activation_spacing=self.min_activation_spacing,
+            max_activation_spacing=self.max_activation_spacing,
             attempts_per_individual=self.attempts_per_individual,
             attempts_per_generation=self.attempts_per_generation,
             fast_dev_run=self.fast_dev_run,
@@ -331,62 +343,40 @@ class Generation:
     def get_survivors(self) -> None:
         assert self.state == State.EVALUATED
         self.survivors = self.filter_by_fitness()
-        print(self.survivors)
-        if len(self.survivors) < 2:
-            if self.attempts < self.attempts_per_generation:
-                print("Not enough surviving individuals to reproduce. Creating new progenitors...")
-                self.state = State.INITIALIZED
-                self.progenitors = Population(
-                    individuals=self.size,
-                    n_nodes=self.n_nodes,
-                    task=self.task,
-                    input_shape=self.input_shape,
-                    output_shape=self.output_shape,
-                    sequential=self.is_sequential,
-                    activation_interval=self.activation_interval,
-                    framework=self.framework,
-                    attempts_per_individual=self.attempts_per_individual,
-                    fast_dev_run=self.fast_dev_run,
-                )
-                self.attempts += 1
-                self.evaluate_fitnesses()
-                self.get_survivors()
-
-            else:
-                raise RuntimeError("Maximum generation attempts reached. No surviors")
-        else:
-            new_individuals = [ind for ind in self.survivors]
-            while len(new_individuals) < self.size:
-                self.state = State.INITIALIZED
-                new_progenitors = Population(
-                    individuals=self.size - len(new_individuals),
-                    n_nodes=self.n_nodes,
-                    task=self.task,
-                    input_shape=self.input_shape,
-                    output_shape=self.output_shape,
-                    sequential=self.is_sequential,
-                    activation_interval=self.activation_interval,
-                    framework=self.framework,
-                    attempts_per_individual=self.attempts_per_individual,
-                    fast_dev_run=self.fast_dev_run,
-                )
-                new_progenitors.evaluate_fitnesses()
-                new_survivor = [
-                    ind for ind in new_progenitors if ind.fitness >= self.survival_threshold
-                ]
-                for ind in new_survivor:
-                    new_individuals.append(ind)
-
-            self.survivors = Population(new_individuals, fast_dev_run=self.fast_dev_run)
-
         self.state = State.SURVIVED
+
+    def repopulate(self) -> None:
+        assert self.state == State.SURVIVED
+        assert self.survivors is not None
+        if len(self.survivors) < self.size:
+            print("Not enough surviving individuals to reproduce. Repopulating...")
+            individuals = [ind for ind in self.survivors]
+            while len(individuals) < self.size:
+                if self.attempts >= self.attempts_per_generation:
+                    att = self.attempts_per_generation
+                    raise RuntimeError(
+                        f"Exceeded maximum attempts ({att}) to generate a viable population.\n"
+                        f"Consider increasing `attempts_per_generation` or `attempts_per_individual`,\n"  # noqa: E501
+                        f"or changing options related to activation function frequency."
+                    )
+                print(f"Repopulation attempt {self.attempts}:")
+                self.state = State.INITIALIZED
+                args = self._args()
+                args.update(dict(individuals=self.size - len(individuals)))
+                new = Population(**args)
+                new.evaluate_fitnesses()
+                new_survivors = [ind for ind in new if ind.fitness >= self.survival_threshold]
+                individuals.extend(new_survivors)
+                self.attempts += 1
+            self.survivors = Population(individuals, fast_dev_run=self.fast_dev_run)
+        self.state = State.REPOPULATED
 
     def save_progress(self, survivor_dir: Path = None) -> None:
         """Update the hall of fame, save the hall, and
         individuals with the `hall_size` highest fitnesses across both the previous hall and
         current survivors.
         """
-        assert self.state == State.SURVIVED
+        assert self.state == State.REPOPULATED
         assert self.survivors is not None
 
         self.hall.update(self.survivors)
@@ -440,3 +430,18 @@ class Generation:
             filter(lambda ind: ind.fitness >= self.survival_threshold, self.progenitors)
         )
         return Population(survivors, fast_dev_run=self.fast_dev_run)
+
+    def _args(self) -> Dict[str, Any]:
+        return dict(
+            individuals=self.size,
+            n_nodes=self.n_nodes,
+            task=self.task,
+            input_shape=self.input_shape,
+            output_shape=self.output_shape,
+            sequential=self.is_sequential,
+            min_activation_spacing=self.min_activation_spacing,
+            max_activation_spacing=self.max_activation_spacing,
+            framework=self.framework,
+            attempts_per_individual=self.attempts_per_individual,
+            fast_dev_run=self.fast_dev_run,
+        )

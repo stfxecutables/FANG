@@ -67,12 +67,16 @@ class Population(Evolver):
         If False, first generate a sequential network, and then add random skip connections between
         some nodes. [Currently not implemented].
 
-    activation_interval: int = 0
-        If greater than zero, require a non-linear activation to be placed after
-        `activation_interval` non-activation layers. E.g. if `activation_interval=2`, there can be
-        at maximum two consecutive non-activation layers before a random activation layer is
-        forcefully inserted. We may wish to require semi-regular activations because e.g. two Conv
-        layers just compose to a single linear function, which is an inefficiency.
+    min_activation_spacing: int = 1
+        Sets the minimum number of layers between activations when generating random individuals.
+        E.g. if greater than zero, require `activation_spacing` non-activation layers to be included
+        before adding an activation layer. Not recommended to set larger than 3. Helpful to prevent
+        long chains of nothing but un-trainable activation functions.
+
+    max_activation_spacing: int = 3
+        Forces an activation function to be inserted after `max_activation_spacing` non-activation
+        layers have been randomly selected when creatings a new random individual.
+
 
     framework: "pytorch" | "Tensorflow"
         Which framework to use for instantiating and training the models.
@@ -104,7 +108,8 @@ class Population(Evolver):
         input_shape: Union[int, Tuple[int, ...]] = None,
         output_shape: Union[int, Tuple[int, ...]] = None,
         sequential: bool = True,
-        activation_interval: int = 0,
+        min_activation_spacing: int = 1,
+        max_activation_spacing: int = 3,
         framework: Framework = "pytorch",
         attempts_per_individual: int = 3,
         fast_dev_run: bool = False,
@@ -123,7 +128,8 @@ class Population(Evolver):
             self.task = ind.task
             self.is_sequential = ind.is_sequential
             self.framework = ind.framework
-            self.activation_interval = -1
+            self.min_activation_spacing = min_activation_spacing
+            self.max_activation_spacing = max_activation_spacing
             return
 
         if task is None:
@@ -134,7 +140,8 @@ class Population(Evolver):
         self.task = task
         self.is_sequential = sequential
         self.framework = framework
-        self.activation_interval = activation_interval
+        self.min_activation_spacing = min_activation_spacing
+        self.max_activation_spacing = max_activation_spacing
         self.fitnesses = []
         self.individuals = []
         for _ in range(int(individuals)):
@@ -146,7 +153,8 @@ class Population(Evolver):
                         input_shape=input_shape,
                         output_shape=output_shape,
                         sequential=sequential,
-                        activation_interval=activation_interval,
+                        min_activation_spacing=min_activation_spacing,
+                        max_activation_spacing=max_activation_spacing,
                         framework=framework,
                     )
                 except VanishingError:  # we only want to ignore known error types
