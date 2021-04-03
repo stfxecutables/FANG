@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from src.exceptions import VanishingError
 from src.individual import Individual
 from src.population import Population
@@ -6,12 +8,12 @@ from copy import deepcopy
 import numpy as np
 
 
-def get_individual(attempts: int = 10) -> Individual:
+def get_individual(attempts: int = 10, **kwargs: Dict[str, Any]) -> Individual:
     ind = None
     for i in range(attempts):
         try:
             return Individual(
-                n_nodes=10, task="classification", input_shape=(1, 28, 28), output_shape=10
+                n_nodes=10, task="classification", input_shape=(1, 28, 28), output_shape=10, **kwargs
             )
         except VanishingError:
             continue

@@ -1,15 +1,25 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Union
+from typing import Any, List, Tuple, Union
 
 import numpy as np
 import pytest
 
+from src.interface.pytorch.nodes.activations import Activation
 from src.exceptions import VanishingError
 from src.individual import Individual
 from test.utils import get_individual
 
 LOGFILE = Path(__file__).resolve().parent / "test_individual_outputs.txt"
+
+
+def activation_info(ind: Individual) -> Tuple[List[int], List[int]]:
+    positions = np.array(
+        list(map(lambda layer: isinstance(layer, Activation), ind.layers)), dtype=bool
+    )
+    activation_idx = np.arange(len(ind.layers), dtype=int)[positions]
+    distances = np.diff(activation_idx)
+    return activation_idx, distances
 
 
 @pytest.mark.spec
@@ -64,7 +74,22 @@ class TestCloning:
             # test sequential cloning
 
 
-def test_individual(capsys: Any) -> None:
+@pytest.mark.spec
+def test_activation_intervals(capsys: Any) -> None:
+    for min_spacing in [0, 1, 2, 3, 4, 5]:
+        for max_spacing in [1, 2, 3, 4, 5]:
+            if max_spacing < min_spacing:
+                continue
+            kwargs = dict(min_activation_spacing=min_spacing, max_activation_spacing=max_spacing)
+            for i in range(10):
+                ind = get_individual(50, **kwargs)
+                idx, distances = activation_info(ind)
+                for distance in distances:
+                    assert min_spacing <= distance, "Activations are too close"
+                    assert distance <= max_spacing, "Activations not frequent enough"
+
+
+def test_evaluation(capsys: Any) -> None:
     # SEED = 2
     # np.random.seed(SEED)
     # random.seed(SEED)
