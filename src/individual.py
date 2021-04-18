@@ -279,23 +279,32 @@ class Individual:
         # ).tolist()
 
         ACTIVATION_NODE = [*IMPLEMENTED_ACTIVATIONS]
-
+        NON_ACTIVATION_NODE = [
+            *IMPLEMENTED_CONV,
+            *IMPLEMENTED_DROP,
+            *IMPLEMENTED_NORM,
+            *IMPLEMENTED_PAD,
+            *IMPLEMENTED_POOL,
+        ]
         layers = []
-        activation_distance = 0
+        prev_activation = 0
+        prev_prev_activation = 0
         for i in range(self.n_nodes + 1):
-            layer = np.random.choice(TORCH_NODES_2D, size=1, replace=True).tolist()
-            if self.min_activation_spacing > activation_distance:
-                while isinstance(layer, Activation):
-                    layer = np.random.choice(TORCH_NODES_2D, size=1, replace=True).tolist()
-                activation_distance += 1
-            elif self.max_activation_spacing <= activation_distance:
-                layer = np.random.choice(ACTIVATION_NODE, size=1, replace=True).tolist()
-                activation_distance = 0
+            if i == 0:
+                layer = np.random.choice(NON_ACTIVATION_NODE, size=1, replace=True)
             else:
+                layer = np.random.choice(NON_ACTIVATION_NODE, size=1, replace=True)
+                prev_activation = i
+                activation_distance = prev_activation - prev_prev_activation
                 if isinstance(layer, Activation):
-                    activation_distance = 0
+                    if activation_distance <= self.min_activation_spacing:
+                        layer = np.random.choice(NON_ACTIVATION_NODE, size=1, replace=True)
+                    else:
+                        prev_prev_activation = prev_activation
                 else:
-                    activation_distance += 1
+                    if activation_distance >= self.max_activation_spacing:
+                        layer = np.random.choice(ACTIVATION_NODE, size=1, replace=True)
+                        prev_prev_activation = prev_activation
             layers.append(layer[0])
         # layer = np.random.choice(ACTIVATION_NODE, size=1, replace=True).tolist()
         # layers.append(layer[0])
