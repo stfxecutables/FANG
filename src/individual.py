@@ -271,12 +271,6 @@ class Individual:
         #       * `min_activation_spacing`
 
         # + 1 for input node
-        #####
-
-        # for i in range(self.n_nodes + 1):
-        # layers: List[Type[Layer]] = np.random.choice(
-        #     TORCH_NODES_2D, size=self.n_nodes + 1, replace=True
-        # ).tolist()
 
         ACTIVATION_NODE = [*IMPLEMENTED_ACTIVATIONS]
         NON_ACTIVATION_NODE = [
@@ -306,11 +300,6 @@ class Individual:
                         layer = np.random.choice(ACTIVATION_NODE, size=1, replace=True)
                         prev_prev_activation = prev_activation
             layers.append(layer[0])
-        # layer = np.random.choice(ACTIVATION_NODE, size=1, replace=True).tolist()
-        # layers.append(layer[0])
-        # print(layers)
-
-        #####
 
         prev: layer = layers[0]
 
@@ -321,8 +310,6 @@ class Individual:
             for size in node.output_shape[1:]:
                 if size <= 0:
                     raise VanishingError("Convolutional layers have reduced output to zero size.")
-
-            print(node)
 
             # node.create()
             prev = node
