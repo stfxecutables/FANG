@@ -1,8 +1,11 @@
 from __future__ import annotations  # noqa
 
+import numpy as np
+
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Type, Union, no_type_check
+
 
 from src.hall_of_fame import HallOfFame
 from src.individual import Individual, Task
@@ -255,6 +258,8 @@ class Generation:
 
         self.state = State.INITIALIZED
         self.size = len(population)
+        # TODO: make this configurable and clearer to user
+        self.n_nodes = int(np.random.randint(8, 12, 1))
         self.progenitors = population
         self.input_shape = population.input_shape
         self.output_shape = population.output_shape
