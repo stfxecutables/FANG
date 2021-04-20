@@ -94,8 +94,9 @@ def test_next(capsys: Any, full_run: bool, generations: int, mutation_prob: floa
         add_layers=True,
         swap_layers=True,
         delete_layers=True,
-        survival_threshold=0.2 if not full_run else 0.7,
+        survival_threshold=0.1 if not full_run else 0.6,
         mutation_probability=mutation_prob,
+        max_activation_spacing=2,
         # 10, fast_dev_run=not full_run, add_layers=True
     )
     tmpdir = TemporaryDirectory()
