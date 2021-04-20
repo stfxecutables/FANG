@@ -28,6 +28,7 @@ from src.interface.pytorch.nodes.pad import IMPLEMENTED as IMPLEMENTED_PAD
 from src.interface.pytorch.nodes.pool import IMPLEMENTED as IMPLEMENTED_POOL
 from src.interface.pytorch.optimizer import IMPLEMENTED as IMPLEMENTED_OPTIMS
 from src.interface.pytorch.optimizer import Optimizer as TorchOptimizer
+from src.interface.pytorch.nodes.activations import Activation
 
 TORCH_NODES: List[Layer] = [
     *IMPLEMENTED_ACTIVATIONS,
@@ -270,10 +271,37 @@ class Individual:
         #       * `min_activation_spacing`
 
         # + 1 for input node
-        layers: List[Type[Layer]] = np.random.choice(
-            TORCH_NODES_2D, size=self.n_nodes + 1, replace=True
-        ).tolist()
-        prev: Layer = layers[0]
+
+        ACTIVATION_NODE = [*IMPLEMENTED_ACTIVATIONS]
+        NON_ACTIVATION_NODE = [
+            *IMPLEMENTED_CONV,
+            *IMPLEMENTED_DROP,
+            *IMPLEMENTED_NORM,
+            *IMPLEMENTED_PAD,
+            *IMPLEMENTED_POOL,
+        ]
+        layers = []
+        prev_activation = 0
+        prev_prev_activation = 0
+        for i in range(self.n_nodes + 1):
+            if i == 0:
+                layer = np.random.choice(NON_ACTIVATION_NODE, size=1, replace=True)
+            else:
+                layer = np.random.choice(NON_ACTIVATION_NODE, size=1, replace=True)
+                prev_activation = i
+                activation_distance = prev_activation - prev_prev_activation
+                if isinstance(layer, Activation):
+                    if activation_distance <= self.min_activation_spacing:
+                        layer = np.random.choice(NON_ACTIVATION_NODE, size=1, replace=True)
+                    else:
+                        prev_prev_activation = prev_activation
+                else:
+                    if activation_distance >= self.max_activation_spacing:
+                        layer = np.random.choice(ACTIVATION_NODE, size=1, replace=True)
+                        prev_prev_activation = prev_activation
+            layers.append(layer[0])
+
+        prev: layer = layers[0]
 
         # loop over the random selection of layers and make sure input and output shapes align
         for i, layer in enumerate(layers):
@@ -282,6 +310,7 @@ class Individual:
             for size in node.output_shape[1:]:
                 if size <= 0:
                     raise VanishingError("Convolutional layers have reduced output to zero size.")
+
             # node.create()
             prev = node
             realized_layers.append(node)
