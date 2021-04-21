@@ -101,7 +101,7 @@ class TestPopulation:
     def test_get_crossover_pairs(self) -> None:
         for n in range(10):
             pop = get_pop(10)
-            pairs = pop.get_crossover_pairs(n, method="random")
+            pairs = pop.get_crossover_pairs(n, method="best2")
             assert isinstance(pairs, list)
             assert len(pairs) == n
             for pair in pairs:

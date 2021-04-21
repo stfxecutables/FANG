@@ -352,7 +352,25 @@ class Population(Evolver):
         The crossover pairs should NOT be clones, and should indeed just be references to the
         original individuals.
         """
-        raise NotImplementedError()
+        if method == "random":
+            pairs = []
+            for _ in range(n_pairs):
+                pairs.append(tuple(np.random.choice(self.individuals, size=2, replace=False)))
+            return pairs
+        elif method == "best2":
+            best_pairs = []
+            for _ in range(n_pairs):
+                best_pairs.append(tuple(self.select_best(n=2)))
+            return best_pairs
+
+        elif method == "weighted":
+            pass
+        # raise NotImplementedError()
+        # if method == "random":
+        #     # individuals = (np.array(self.individuals)).tolist()
+        #     random_individual = np.random.choice(self.individuals, n_pairs, replace=True).tolist()
+        #     lst_tuple = [x for x in zip(*[iter(random_individual)])]
+        #     return lst_tuple
 
     def crossover(self, method: PairingMethod = "random") -> Population:
         """Generate crossover pairs, perform crossover, and select a random amount for the offspring
