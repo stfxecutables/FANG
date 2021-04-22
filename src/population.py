@@ -15,7 +15,7 @@ from src.interface.arguments import ArgMutation
 from src.interface.evolver import Evolver
 from src.interface.initializer import Framework
 
-PairingMethod = Literal["random", "best", "weighted-random"]
+PairingMethod = Literal["random", "best", "best2", "weighted-random"]
 
 
 class Population(Evolver):
@@ -360,7 +360,21 @@ class Population(Evolver):
         The crossover pairs should NOT be clones, and should indeed just be references to the
         original individuals.
         """
-        raise NotImplementedError()
+        if method == "random":
+            pairs = []
+            for _ in range(n_pairs):
+                pairs.append(tuple(np.random.choice(self.individuals, size=2, replace=False)))
+            return pairs
+        elif method == "best2":
+            best_pairs = []
+            for _ in range(n_pairs):
+                best_pairs.append(tuple(self.select_best(n=2)))
+            return best_pairs
+
+        elif method == "weighted":
+            raise NotImplementedError()
+        else:
+            raise ValueError("Invalid pairing method.")
 
     def crossover(self, method: PairingMethod = "random") -> Population:
         """Generate crossover pairs, perform crossover, and select a random amount for the offspring
