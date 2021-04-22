@@ -68,4 +68,3 @@ def cross_individuals(
         print("Cannot resolve input/output sizes. Generating new cross.")
         return cross_individuals(ind1, ind2)  # type: ignore
     return clone1, clone2
-    # raise NotImplementedError()

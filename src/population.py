@@ -364,13 +364,8 @@ class Population(Evolver):
             return best_pairs
 
         elif method == "weighted":
-            pass
-        # raise NotImplementedError()
-        # if method == "random":
-        #     # individuals = (np.array(self.individuals)).tolist()
-        #     random_individual = np.random.choice(self.individuals, n_pairs, replace=True).tolist()
-        #     lst_tuple = [x for x in zip(*[iter(random_individual)])]
-        #     return lst_tuple
+            raise NotImplementedError()
+
 
     def crossover(self, method: PairingMethod = "random") -> Population:
         """Generate crossover pairs, perform crossover, and select a random amount for the offspring
