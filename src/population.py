@@ -1,6 +1,6 @@
-from __future__ import annotations  # noqa
+from __future__ import annotations
 
-import sys
+import traceback
 from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Tuple, Union
@@ -159,8 +159,8 @@ class Population(Evolver):
                     )
                 except VanishingError:  # we only want to ignore known error types
                     continue
-                except Exception as e:
-                    raise RuntimeError("Unexpected error:") from e
+                # except Exception as e:
+                #     raise RuntimeError("Unexpected error:") from e
                 self.individuals.append(ind)
                 break
 
@@ -241,7 +241,7 @@ class Population(Evolver):
             try:  # we want this to be fail-proof
                 individual.evaluate_fitness(self.fast_dev_run)
             except Exception as e:
-                print(e, file=sys.stderr)
+                print(traceback.format_exc())
                 individual.fitness = -1.0
         self.fitnesses = np.array(
             list(map(lambda individual: individual.fitness, self.individuals))  # type: ignore
